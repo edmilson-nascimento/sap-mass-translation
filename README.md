@@ -5,25 +5,43 @@
 
 ---
 
+## 📋 Índice de Navegação
+
+| Fase | Link | Descrição |
+|------|------|----------|
+| 1️⃣ Object List | [→ Criar Object List](#1-criar-a-object-list) | Setup inicial na LXE_MASTER |
+| 2️⃣ Evaluation | [→ Executar Evaluation](#2-executar-a-evaluation) | Job em background para avaliar requests |
+| 3️⃣ Worklist | [→ Verificar Worklist](#3-verificar-a-worklist) | Consultar itens identificados |
+| 4️⃣ Exportar | [→ Exportar XLIFF](#4-exportar-os-textos-xliff) | Extrair textos em formato XLIFF |
+| 5️⃣ Traduzir | [→ Traduzir](#5-traduzir) | Preencher traduções |
+| 6️⃣ Importar | [→ Importar Traduções](#6-importar-as-traduções) | Aplicar traduções no sistema |
+| 7️⃣ Transporte | [→ Transport Request](#7-coletar-na-transport-request) | Gerar TR de tradução |
+| 8️⃣ STMS | [→ Transportar via STMS](#8-transportar-via-stms) | Promover para ambientes superiores |
+
+---
+
 ## Fluxo Geral
 
 ```mermaid
-flowchart TD
-    A([🚀 Início]) --> B[Reunir Transport Requests\ncom objetos a traduzir]
-    B --> C[LXE_MASTER\nCriar Object List]
-    C --> D[Adicionar Requests\nna Object List]
-    D --> E[Executar Evaluation\nJob em background]
-    E --> F{Job finalizado\ncom sucesso?}
-    F -- Não --> G[Verificar Job Log\nSM37]
+%%{ init: { 'flowchart': { 'curve': 'basis' } } }%%
+flowchart TB
+    A((" ")):::startClass --> B(["Reunir Transport Requests<br/>com objetos a traduzir"])
+    B --> C(["LXE_MASTER<br/>Criar Object List"])
+    C --> D(["Adicionar Requests<br/>na Object List"])
+    D --> E(["Executar Evaluation<br/>Job em background"])
+    E --> F{"Job finalizado<br/>com sucesso?"}
+    F -->|Não| G(["Verificar Job Log<br/>SM37"])
     G --> E
-    F -- Sim --> H[Verificar Worklist\nWorklist Numbers]
-    H --> I[Exportar textos\nem formato XLIFF]
-    I --> J[Traduzir arquivo\nEN → DE]
-    J --> K[Importar XLIFF\ntraduzido na LXE_MASTER]
-    K --> L[Sistema gera\nTransport Request de tradução]
-    L --> M[Verificar traduções\nno sistema]
-    M --> N[Transportar via STMS\nS4D → S4Q → S4P]
-    N --> O([✅ Concluído])
+    F -->|Sim| H(["Verificar Worklist<br/>Worklist Numbers"])
+    H --> I(["Exportar textos<br/>em formato XLIFF"])
+    I --> J(["Traduzir arquivo<br/>EN → DE"])
+    J --> K(["Importar XLIFF<br/>traduzido na LXE_MASTER"])
+    K --> L(["Sistema gera<br/>Transport Request de tradução"])
+    L --> M(["Verificar traduções<br/>no sistema"])
+    M --> N(["Transportar via STMS<br/>DEV → QAS → PRD"])
+    N --> O(((" "))):::endClass
+    classDef startClass fill:black,stroke:#333,stroke-width:4px;
+    classDef endClass fill:black,stroke:#333,stroke-width:4px;
 ```
 
 ---
@@ -68,7 +86,7 @@ O sistema dispara um job em background (`OBJLIST_XXXXX`) que:
 SM37 → Job name: OBJLIST_* → User: <seu usuário>
 ```
 
-Aguarde o status **Finished** antes de prosseguir.
+Aguarde o status **Finished** antes de prosseguir. [↑ Voltar ao índice](#-índice-de-navegação)
 
 **Tipos de objeto extraídos:**
 - Textos de programas ABAP Z (títulos, mensagens, textos de seleção)
@@ -135,8 +153,8 @@ Ao salvar as traduções importadas, o sistema solicita (ou gera automaticamente
 Ordem de transporte recomendada:
 
 ```
-1. Requests originais dos objetos  →  S4D → S4Q → S4P
-2. Request de tradução (LXE)       →  S4D → S4Q → S4P
+1. Requests originais dos objetos  →  DEV → QAS → PRD
+2. Request de tradução (LXE)       →  DEV → QAS → PRD
 ```
 
 > A request de tradução deve ser transportada **após** os objetos originais já estarem no ambiente de destino.
@@ -159,9 +177,9 @@ Ordem de transporte recomendada:
 
 | Sistema | Uso |
 |---|---|
-| S4D | Desenvolvimento — onde a tradução é executada |
-| S4Q | Qualidade — validação das traduções |
-| S4P | Produção — destino final |
+| DEV | Desenvolvimento — onde a tradução é executada |
+| QAS | Qualidade — validação das traduções |
+| PRD | Produção — destino final |
 
 **Versão SAP:** S/4HANA 2023 FPS04  
 **Idioma origem:** EN  
