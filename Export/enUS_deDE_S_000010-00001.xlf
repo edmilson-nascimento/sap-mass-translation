@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2"
+    xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file datatype="plaintext" original="//S4D//100//999999//RPT4//Z_ALGARVE_EN" source-language="en-US" target-language="de-DE" date="2026-02-23T15:51:25Z" category="ZZ" xml:space="preserve">
+        <body>
+            <trans-unit size-unit="char" approved="no" maxwidth="26" id="TEXT    003            26" resname="RPT4//Z_ALGARVE_EN//TEXT    003            26">
+                <source>Adobe Form mode</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="50" id="TEXT    007            50" resname="RPT4//Z_ALGARVE_EN//TEXT    007            50">
+                <source>Adobe print job finished.</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="70" id="TITLE" resname="RPT4//Z_ALGARVE_EN//TITLE">
+                <source>Algarve English Report</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="78" id="TEXT    011            78" resname="RPT4//Z_ALGARVE_EN//TEXT    011            78">
+                <source>Could not resolve form function module.</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="42" id="TEXT    009            42" resname="RPT4//Z_ALGARVE_EN//TEXT    009            42">
+                <source>Form function module:</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="15" id="TEXT    002            15" resname="RPT4//Z_ALGARVE_EN//TEXT    002            15">
+                <source>Hello</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="26" id="TEXT    001            26" resname="RPT4//Z_ALGARVE_EN//TEXT    001            26">
+                <source>Normal execution mode</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="70" id="TEXT    008            70" resname="RPT4//Z_ALGARVE_EN//TEXT    008            70">
+                <source>Please fill in the ADS destination.</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="19" id="TEXT    010            19" resname="RPT4//Z_ALGARVE_EN//TEXT    010            19">
+                <source>Spool ID:</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="54" id="TEXT    006            54" resname="RPT4//Z_ALGARVE_EN//TEXT    006            54">
+                <source>Starting Adobe print job...</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="118" id="TEXT    004           118" resname="RPT4//Z_ALGARVE_EN//TEXT    004           118">
+                <source>The Adobe form will be rendered now.</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="46" id="TEXT    005            46" resname="RPT4//Z_ALGARVE_EN//TEXT    005            46">
+                <source>Translation Test</source>
+            </trans-unit>
+            <trans-unit size-unit="char" approved="no" maxwidth="80" id="TEXT    012            80" resname="RPT4//Z_ALGARVE_EN//TEXT    012            80">
+                <source>Welcome to the translation test program.</source>
+            </trans-unit>
+        </body>
+    </file>
+    <file datatype="plaintext" original="//S4D//100//999999//TLGS//SFPFZ_FP_TEST_00                            02" source-language="en-US" target-language="de-DE" date="2026-02-23T15:51:25Z" category="ZZ" xml:space="preserve">
+        <body>
+            <trans-unit size-unit="char" approved="no" maxwidth="60" id="0000010005TEXT" resname="TLGS//SFPFZ_FP_TEST_00                            02//0000010005TEXT">
+                <source>Output ITF - English Version</source>
+                <target state="needs-review-translation">ITF ausgeben</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

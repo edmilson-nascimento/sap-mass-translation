@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file category="ZZ" datatype="xhtml" date="2026-02-23T15:51:26Z" original="//S4D//100//999999//PDFB//Z_FP_TEST_00" source-language="en-US" target-language="de-DE">
+    <header>
+      <skl>
+        <internal-file crc="DAC4F1AF6EA435E7ABE86791E74DD31A"/>
+      </skl>
+    </header>
+    <body>
+      <trans-unit id="34CF33C2-AB3B-4572-AA50-F606C494CB52" resname="34CF33C2-AB3B-4572-AA50-F606C494CB52">
+        <source>
+                           <bpt id="INL-1" rid="1">&lt;body xmlns:xdp="http://ns.adobe.com/xdp/" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.1" xmlns="http://www.w3.org/1999/xhtml" xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/" xfa:APIVersion="2.7.0.0"&gt;</bpt><bpt id="INL-2" rid="2">&lt;p style="letter-spacing:0in"&gt;</bpt>'If a machine can think, it might think more intelligently than we do, and then where should we be?'<bpt id="INL-3" rid="3">&lt;span style="xfa-spacerun:yes"&gt;</bpt> <ept id="INL-4" rid="3">&lt;/span&gt;</ept><ept id="INL-5" rid="2">&lt;/p&gt;</ept><bpt id="INL-6" rid="4">&lt;p style="letter-spacing:0in"&gt;</bpt>- Alan Turing<ept id="INL-7" rid="4">&lt;/p&gt;</ept><ept id="INL-8" rid="1">&lt;/body&gt;</ept>
+                        </source>
+        <target><bpt id="INL-1" rid="5">&lt;body xmlns:xdp="http://ns.adobe.com/xdp/" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.1" xmlns="http://www.w3.org/1999/xhtml" xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/" xfa:APIVersion="2.7.0.0"&gt;</bpt><bpt id="INL-2" rid="6">&lt;p style="letter-spacing:0in"&gt;</bpt>'Wenn eine Maschine denken kann, könnte sie intelligenter denken als wir – und wo stünden wir dann?'<bpt id="INL-3" rid="7">&lt;span style="xfa-spacerun:yes"&gt;</bpt> <ept id="INL-4" rid="7">&lt;/span&gt;</ept><ept id="INL-5" rid="6">&lt;/p&gt;</ept><bpt id="INL-6" rid="8">&lt;p style="letter-spacing:0in"&gt;</bpt>- Alan Turing<ept id="INL-7" rid="8">&lt;/p&gt;</ept><ept id="INL-8" rid="5">&lt;/body&gt;</ept></target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

@@ -46,12 +46,55 @@ flowchart TB
 
 ---
 
+## Configuração Inicial (Pré-requisito único por idioma)
+
+Antes de rodar qualquer evaluation para um novo idioma alvo, é necessário configurar os **Object Types** e registrar o idioma. **Se essa configuração estiver ausente, a evaluation finalizará com sucesso mas a Worklist ficará vazia.**
+
+### Registrar idioma alvo
+
+**Transação:** `LXE_MASTER` → aba **Languages** → **Translation Languages**
+
+Adicione o idioma alvo (ex: `deDE`) caso ainda não esteja listado. Os idiomas instalados ficam visíveis aqui com status **Installed**.
+
+### Configurar Object Types para o idioma alvo
+
+**Transação:** `LXE_MASTER` → aba **Languages** → **Object Types** → selecione o idioma alvo (ex: `deDE`)
+
+Aqui você define quais tipos de objeto serão considerados na tradução para esse idioma.
+
+**Para selecionar todos os Object Types de uma vez:**
+
+Na tela de seleção existe uma árvore com grupos (ex: A5 User Interface Texts, B5 SAPScript, Q5 PDF-Based Forms, etc.). Selecione todos os grupos disponíveis e salve com um nome descritivo (ex: `object_types_all`) — isso garante que nenhum tipo de objeto seja excluído da avaliação.
+
+![Object Types - Seleção de grupos](./img/languages-object-types-selection.png)
+
+![Object Types deDE configurados](./img/languages-object-types-dede.png)
+
+**Object Types recomendados para tradução de objetos Z (programas e formulários):**
+
+| Tipo | Descrição |
+|---|---|
+| `CA4` | Interface Texts (PROG) |
+| `RPT4` | Text Elements (PROG) |
+| `SRT4` | Screen Painter Texts (PROG) |
+| `SRH4` | Screen Painter Headers (PROG) |
+| `MESS` | Messages |
+| `DTEL` | Data Elements |
+| `PDFB` | PDF-Based Forms |
+| `XDPS` | Short Texts in Adobe Forms |
+| `XDPL` | Long Texts in Adobe Forms |
+
+> ⚠️ Essa configuração é **por idioma alvo** — se futuramente precisar traduzir para frFR ou outro idioma, repita o processo para aquele idioma.
+
+---
+
 ## Pré-requisitos
 
 - Acesso à transação `LXE_MASTER`
 - Transport Requests com os objetos Z já criadas e em status **modifiable** ou **released**
 - Idioma de origem: **EN (English)**
 - Idioma de destino: **DE (German)**
+- Object Types configurados para o idioma alvo (ver seção acima)
 
 ---
 
@@ -69,9 +112,15 @@ flowchart TB
 
 > 💡 Uma única Object List pode conter múltiplas requests — consolide todas aqui para traduzir tudo de uma vez.
 
+- Colocar a data da rquest como vazia
+- Colocar a task ao inves da rquest pois vai na tabela E071 para buscar dados
+- Informar * para o tipo de request para facilitar a busca
+
 ---
 
 ### 2. Executar a Evaluation
+
+> ⚠️ Certifique-se de que os **Object Types** para o idioma alvo estão configurados em Languages → Object Types antes de executar. Uma lista vazia resultará em Worklist vazia mesmo com job Finished.
 
 **Transação:** `LXE_MASTER` → selecione a Object List → **Execute**
 
@@ -192,3 +241,24 @@ Ordem de transporte recomendada:
 - A Object List pode ser reutilizada para futuras execuções — basta atualizar as requests e rodar a evaluation novamente.
 - Em caso de erros no job, verificar o **Job Log** em `SM37` → botão **Job Log**.
 - Traduções parciais são possíveis: você pode importar por etapas e acumular na mesma request de tradução.
+
+---
+
+Olha o final do spool:
+
+```
+TRANSPORTS: 0
+```
+
+Isso confirma o problema — com **"All ABAP Packages"** marcado, o sistema varreu tudo mas **ignorou completamente as TRs**. Por isso `TRANSPORTS: 0`.
+
+**Conclusão do que aprendemos até agora:**
+
+A configuração correta da Object List deve ser:
+
+- **Evaluate Collections → Object Types**: 273 ✅
+- **Evaluate Collections → "All ABAP Packages"**: ❌ desmarcar
+- **Evaluate Collections → Collections**: vazio
+- **Evaluate Transports**: suas 2 requests ✅
+
+O campo **Collections** e o **"All ABAP Packages"** são uma abordagem alternativa às TRs — você usa um **ou** outro, não os dois juntos.
