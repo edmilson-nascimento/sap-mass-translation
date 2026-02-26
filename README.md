@@ -1,6 +1,12 @@
+Com certeza! É perfeitamente possível inserir esses "aprendizados de campo" sem quebrar a estrutura que você já criou. Vou adicionar uma seção de **Troubleshooting** e notas específicas nos passos 1 e 4, que foram os pontos críticos que descobrimos.
+
+Aqui está o conteúdo atualizado para o seu `README.md`:
+
+---
+
 # SAP Mass Translation — LXE_MASTER
 
-> **Guia de referência** para tradução em massa de objetos Z no SAP S/4HANA 2023 utilizando a transação `LXE_MASTER`.  
+> **Guia de referência** para tradução em massa de objetos Z no SAP S/4HANA 2023 utilizando a transação `LXE_MASTER`.
 > Cobre o fluxo completo: extração → tradução → importação → transporte.
 
 ---
@@ -8,15 +14,16 @@
 ## 📋 Índice de Navegação
 
 | Fase | Link | Descrição |
-|------|------|----------|
-| 1️⃣ Object List | [→ Criar Object List](#1-criar-a-object-list) | Setup inicial na LXE_MASTER |
-| 2️⃣ Evaluation | [→ Executar Evaluation](#2-executar-a-evaluation) | Job em background para avaliar requests |
-| 3️⃣ Worklist | [→ Verificar Worklist](#3-verificar-a-worklist) | Consultar itens identificados |
-| 4️⃣ Exportar | [→ Exportar XLIFF](#4-exportar-os-textos-xliff) | Extrair textos em formato XLIFF |
-| 5️⃣ Traduzir | [→ Traduzir](#5-traduzir) | Preencher traduções |
-| 6️⃣ Importar | [→ Importar Traduções](#6-importar-as-traduções) | Aplicar traduções no sistema |
-| 7️⃣ Transporte | [→ Transport Request](#7-coletar-na-transport-request) | Gerar TR de tradução |
-| 8️⃣ STMS | [→ Transportar via STMS](#8-transportar-via-stms) | Promover para ambientes superiores |
+| --- | --- | --- |
+| 1️⃣ Object List | [→ Criar Object List](https://www.google.com/search?q=%231-criar-a-object-list) | Setup inicial na LXE_MASTER |
+| 2️⃣ Evaluation | [→ Executar Evaluation](https://www.google.com/search?q=%232-executar-a-evaluation) | Job em background para avaliar requests |
+| 3️⃣ Worklist | [→ Verificar Worklist](https://www.google.com/search?q=%233-verificar-a-worklist) | Consultar itens identificados |
+| 4️⃣ Exportar | [→ Exportar XLIFF](https://www.google.com/search?q=%234-exportar-os-textos-xliff) | Extrair textos em formato XLIFF |
+| 5️⃣ Traduzir | [→ Traduzir](https://www.google.com/search?q=%235-traduzir) | Preencher traduções |
+| 6️⃣ Importar | [→ Importar Traduções](https://www.google.com/search?q=%236-importar-as-tradu%C3%A7%C3%B5es) | Aplicar traduções no sistema |
+| 7️⃣ Transporte | [→ Transport Request](https://www.google.com/search?q=%237-coletar-na-transport-request) | Gerar TR de tradução |
+| 8️⃣ STMS | [→ Transportar via STMS](https://www.google.com/search?q=%238-transportar-via-stms) | Promover para ambientes superiores |
+| 💡 **Dicas** | [→ **Troubleshooting](https://www.google.com/search?q=%23-solu%C3%A7%C3%A3o-de-problemas-troubleshooting)** | **O que fazer se nada for exportado** |
 
 ---
 
@@ -42,6 +49,7 @@ flowchart TB
     N --> O(((" "))):::endClass
     classDef startClass fill:black,stroke:#333,stroke-width:4px;
     classDef endClass fill:black,stroke:#333,stroke-width:4px;
+
 ```
 
 ---
@@ -66,14 +74,10 @@ Aqui você define quais tipos de objeto serão considerados na tradução para e
 
 Na tela de seleção existe uma árvore com grupos (ex: A5 User Interface Texts, B5 SAPScript, Q5 PDF-Based Forms, etc.). Selecione todos os grupos disponíveis e salve com um nome descritivo (ex: `object_types_all`) — isso garante que nenhum tipo de objeto seja excluído da avaliação.
 
-![Object Types - Seleção de grupos](./img/languages-object-types-selection.png)
-
-![Object Types deDE configurados](./img/languages-object-types-dede.png)
-
 **Object Types recomendados para tradução de objetos Z (programas e formulários):**
 
 | Tipo | Descrição |
-|---|---|
+| --- | --- |
 | `CA4` | Interface Texts (PROG) |
 | `RPT4` | Text Elements (PROG) |
 | `SRT4` | Screen Painter Texts (PROG) |
@@ -90,11 +94,11 @@ Na tela de seleção existe uma árvore com grupos (ex: A5 User Interface Texts,
 
 ## Pré-requisitos
 
-- Acesso à transação `LXE_MASTER`
-- Transport Requests com os objetos Z já criadas e em status **modifiable** ou **released**
-- Idioma de origem: **EN (English)**
-- Idioma de destino: **DE (German)**
-- Object Types configurados para o idioma alvo (ver seção acima)
+* Acesso à transação `LXE_MASTER`
+* Transport Requests com os objetos Z já criadas e em status **modifiable** ou **released**
+* Idioma de origem: **EN (English)**
+* Idioma de destino: **DE (German)**
+* Object Types configurados para o idioma alvo (ver seção acima)
 
 ---
 
@@ -104,17 +108,22 @@ Na tela de seleção existe uma árvore com grupos (ex: A5 User Interface Texts,
 
 **Transação:** `LXE_MASTER` → aba **Evaluations** → **Object Lists**
 
-1. Clique em **New** para criar uma nova Object List
-2. Informe um nome descritivo (ex: `TRAD_ALGARVE_2026`)
-3. Na seção **Evaluate Transports**, adicione as Transport Requests desejadas
-4. Marque a opção **Refresh Terminology Domains**
-5. Salve
+1. Clique em **New** para criar uma nova Object List.
+2. Informe um nome descritivo (ex: `TRAD_ALGARVE_2026`).
+3. Na seção **Evaluate Transports**, adicione as Transport Requests desejadas.
+4. Marque a opção **Refresh Terminology Domains**.
+5. **Atenção à aba "Collections":**
+* Se estiver filtrando por TR, **desmarque** a opção "All ABAP Packages".
+* Misturar "All ABAP Packages" com "Evaluate Transports" pode resultar em logs com `TRANSPORTS: 0`. O SAP prioriza coleções e ignora sua TR.
+
+
+6. Salve.
 
 > 💡 Uma única Object List pode conter múltiplas requests — consolide todas aqui para traduzir tudo de uma vez.
 
-- Colocar a data da rquest como vazia
-- Colocar a task ao inves da rquest pois vai na tabela E071 para buscar dados
-- Informar * para o tipo de request para facilitar a busca
+* Colocar a data da rquest como vazia.
+* Colocar a task ao inves da rquest pois vai na tabela E071 para buscar dados.
+* Informar * para o tipo de request para facilitar a busca.
 
 ---
 
@@ -125,23 +134,19 @@ Na tela de seleção existe uma árvore com grupos (ex: A5 User Interface Texts,
 **Transação:** `LXE_MASTER` → selecione a Object List → **Execute**
 
 O sistema dispara um job em background (`OBJLIST_XXXXX`) que:
-- Varre todas as requests informadas
-- Identifica todos os textos traduzíveis (programas Z, formulários, customizing, etc.)
-- Monta a Worklist com os itens encontrados
+
+* Varre todas as requests informadas.
+* Identifica todos os textos traduzíveis (programas Z, formulários, customizing, etc.).
+* Monta a Worklist com os itens encontrados.
 
 **Monitorar o job:**
 
 ```
 SM37 → Job name: OBJLIST_* → User: <seu usuário>
+
 ```
 
-Aguarde o status **Finished** antes de prosseguir. [↑ Voltar ao índice](#-índice-de-navegação)
-
-**Tipos de objeto extraídos:**
-- Textos de programas ABAP Z (títulos, mensagens, textos de seleção)
-- Textos de Smartforms / Adobe Forms Z
-- Descrições de customizing (configurações criadas)
-- Textos de elementos de dados e domínios Z
+Aguarde o status **Finished** antes de prosseguir. [↑ Voltar ao índice](https://www.google.com/search?q=%23-%C3%ADndice-de-navega%C3%A7%C3%A3o)
 
 ---
 
@@ -150,9 +155,10 @@ Aguarde o status **Finished** antes de prosseguir. [↑ Voltar ao índice](#-ín
 **Transação:** `LXE_MASTER` → **Worklist Numbers**
 
 Verifique:
-- Quantidade de objetos encontrados
-- Se todos os objetos esperados estão presentes
-- Status de cada item (traduzido / pendente)
+
+* Quantidade de objetos encontrados.
+* Se todos os objetos esperados estão presentes.
+* Status de cada item (traduzido / pendente).
 
 ---
 
@@ -160,11 +166,14 @@ Verifique:
 
 Na Worklist, exporte os textos para o formato **XLIFF**:
 
-1. Selecione os itens desejados (ou todos)
-2. Menu **Export** → selecione formato XLIFF
-3. Salve o arquivo para envio ao tradutor
+1. Selecione os itens desejados (ou todos).
+2. Menu **Export** → selecione formato XLIFF.
+3. **Filtro Crítico:** Para tabelas de Customizing, marque sempre **"Filter table keys"**.
+* **Sem o filtro:** O SAP exportará a tabela inteira (ex: todas as regiões do mundo na `T005U`).
+* **Com o filtro:** O SAP exportará apenas as linhas (chaves) contidas na sua TR (ex: apenas a região Algarve).
 
-> O arquivo XLIFF contém os textos originais em EN prontos para preenchimento em DE.
+
+4. Salve o arquivo para envio ao tradutor.
 
 ---
 
@@ -172,28 +181,21 @@ Na Worklist, exporte os textos para o formato **XLIFF**:
 
 Preencha as traduções EN → DE no arquivo XLIFF exportado.
 
-Pode ser feito:
-- **Manualmente** no próprio arquivo XML
-- Via **ferramenta de tradução** (SDL Trados, memoQ, etc.)
-- Diretamente na interface da LXE_MASTER pela aba **Translators**
-
 ---
 
 ### 6. Importar as Traduções
 
 **Transação:** `LXE_MASTER` → **Worklist** → **Import**
 
-1. Selecione o arquivo XLIFF com as traduções preenchidas
-2. Execute a importação
-3. O sistema aplica os textos DE nos objetos correspondentes
+1. Selecione o arquivo XLIFF com as traduções preenchidas.
+2. Execute a importação.
+3. O sistema aplica os textos DE nos objetos correspondentes.
 
 ---
 
 ### 7. Coletar na Transport Request
 
 Ao salvar as traduções importadas, o sistema solicita (ou gera automaticamente) uma **Transport Request de tradução**.
-
-> ⚠️ Essa request é **independente** das requests originais dos objetos. Anote o número para transporte posterior.
 
 ---
 
@@ -204,61 +206,44 @@ Ordem de transporte recomendada:
 ```
 1. Requests originais dos objetos  →  DEV → QAS → PRD
 2. Request de tradução (LXE)       →  DEV → QAS → PRD
+
 ```
 
-> A request de tradução deve ser transportada **após** os objetos originais já estarem no ambiente de destino.
+---
+
+## ⚠️ Solução de Problemas (Troubleshooting)
+
+### "Gerei a Object List mas ela encontrou 0 objetos"
+
+* **Conflito de Escopo:** Verifique se a opção "All ABAP Packages" está marcada na aba Collections. Se estiver, o sistema ignora a aba "Evaluate Transports".
+* **Object Types:** Verifique se os Object Types (CA4, DTEL, etc.) estão ativos para o idioma alvo em `Languages -> Object Types`. Se a lista estiver vazia, nada será coletado.
+
+### "Marquei 'Filter table keys' no Export e o arquivo veio vazio"
+
+Isso ocorre quando há um descompasso entre a TR e o ambiente LXE:
+
+1. **Status na SE63:** A tradução precisa estar com status "Traduzido" (Verde) na `SE63` para ser exportada.
+2. **Sincronia da Object List:** Se os dados foram alterados na tabela *após* a criação da Object List, ela não terá as chaves em cache. Crie uma nova Object List.
+3. **Mandante (Client):** Verifique se as traduções existem no mandante onde a `LXE_MASTER` está rodando.
 
 ---
 
 ## Referência Rápida
 
 | Etapa | Transação | Observação |
-|---|---|---|
+| --- | --- | --- |
 | Criar Object List | `LXE_MASTER` | Adicionar todas as requests |
 | Monitorar Job | `SM37` | Job: `OBJLIST_*` |
-| Exportar XLIFF | `LXE_MASTER` | Worklist → Export |
+| Exportar XLIFF | `LXE_MASTER` | **Marcar Filter Table Keys** |
 | Importar XLIFF | `LXE_MASTER` | Worklist → Import |
 | Transportar | `STMS` | Objetos antes, tradução depois |
 
 ---
 
-## Ambiente
-
-| Sistema | Uso |
-|---|---|
-| DEV | Desenvolvimento — onde a tradução é executada |
-| QAS | Qualidade — validação das traduções |
-| PRD | Produção — destino final |
-
-**Versão SAP:** S/4HANA 2023 FPS04  
-**Idioma origem:** EN  
-**Idioma destino:** DE  
+**Ambiente:** S/4HANA 2023 FPS04 | EN → DE
 
 ---
 
-## Notas
+### Próximo passo sugerido:
 
-- A Object List pode ser reutilizada para futuras execuções — basta atualizar as requests e rodar a evaluation novamente.
-- Em caso de erros no job, verificar o **Job Log** em `SM37` → botão **Job Log**.
-- Traduções parciais são possíveis: você pode importar por etapas e acumular na mesma request de tradução.
-
----
-
-Olha o final do spool:
-
-```
-TRANSPORTS: 0
-```
-
-Isso confirma o problema — com **"All ABAP Packages"** marcado, o sistema varreu tudo mas **ignorou completamente as TRs**. Por isso `TRANSPORTS: 0`.
-
-**Conclusão do que aprendemos até agora:**
-
-A configuração correta da Object List deve ser:
-
-- **Evaluate Collections → Object Types**: 273 ✅
-- **Evaluate Collections → "All ABAP Packages"**: ❌ desmarcar
-- **Evaluate Collections → Collections**: vazio
-- **Evaluate Transports**: suas 2 requests ✅
-
-O campo **Collections** e o **"All ABAP Packages"** são uma abordagem alternativa às TRs — você usa um **ou** outro, não os dois juntos.
+**Gostaria que eu revisasse o passo a passo para criar essa nova Object List (limpa, sem os pacotes ABAP marcados) para garantirmos que o Algarve apareça no log desta vez?**
