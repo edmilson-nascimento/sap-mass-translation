@@ -244,6 +244,11 @@ Isso ocorre quando há um descompasso entre a TR e o ambiente LXE:
 
 ---
 
+findings
+Como gerar a TR real: Para levar as traduções para QAS/PRD, você precisa usar uma transação complementar chamada SLXT (SE63 Translation Export). É nela que você define: "Pegue todas as traduções feitas hoje pelo usuário X e coloque na TR Y".
+
+---
+
 ### Próximo passo sugerido:
 
 **Gostaria que eu revisasse o passo a passo para criar essa nova Object List (limpa, sem os pacotes ABAP marcados) para garantirmos que o Algarve apareça no log desta vez?**
