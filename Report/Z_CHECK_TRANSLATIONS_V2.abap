@@ -459,12 +459,21 @@ CLASS lcl_translation_checker IMPLEMENTATION.
 
 
   METHOD process_table.
+
+    TYPES: BEGIN OF ty_pivot,
+             key     TYPE string,
+             text_en TYPE string,
+             text_fr TYPE string,
+             text_de TYPE string,
+           END OF ty_pivot.
+
     DATA lr_data   TYPE REF TO data.
     DATA lt_keys   TYPE stringtab.
     DATA lv_lang   TYPE spras.
     DATA lv_key    TYPE string.
     DATA lv_txt    TYPE string.
     DATA lv_status TYPE char10.
+    DATA lt_pivot TYPE HASHED TABLE OF ty_pivot WITH UNIQUE KEY key.
 
     " --- Build dynamic internal table based on DDIC structure ---
     TRY.
@@ -497,15 +506,6 @@ CLASS lcl_translation_checker IMPLEMENTATION.
     " --- Pivot rows into one result line per composite key ---
     SPLIT is_meta-key_fields AT ',' INTO TABLE lt_keys.
     DELETE lt_keys WHERE table_line IS INITIAL.
-
-    TYPES: BEGIN OF ty_pivot,
-             key     TYPE string,
-             text_en TYPE string,
-             text_fr TYPE string,
-             text_de TYPE string,
-           END OF ty_pivot.
-
-    DATA lt_pivot TYPE HASHED TABLE OF ty_pivot WITH UNIQUE KEY key.
 
     LOOP AT <lt_dyn> ASSIGNING FIELD-SYMBOL(<row>).
       FIELD-SYMBOLS <lang_fld> TYPE any.
@@ -734,7 +734,7 @@ INITIALIZATION.
   APPEND VALUE #( sign = 'I'  option = 'CP'  low = 'TV*'    ) TO s_tabnm.
   APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'MAKT'   ) TO s_tabnm.
   APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'CSKT'   ) TO s_tabnm.
-  APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'CEPC_T' ) TO s_tabnm.
+  APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'CEPCT' ) TO s_tabnm.
 
 START-OF-SELECTION.
   DATA(lo_checker) = NEW lcl_translation_checker( ).
