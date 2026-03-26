@@ -1,7 +1,7 @@
-REPORT z_check_translations_v2.
+REPORT z_check_translations_v3.
 
 " ========================================================================
-" Program     : Z_CHECK_TRANSLATIONS_V2
+" Program     : Z_CHECK_TRANSLATIONS_V3
 " Description : Check EN / FR / DE translation coverage in DDIC
 "               transparent tables that contain a language key field.
 " Platform    : SAP S/4HANA 2023 / ABAP Platform 2023 SP04
@@ -154,6 +154,15 @@ REPORT z_check_translations_v2.
 " ========================================================================
 " Date        Author   Description
 " ----------  -------  --------------------------------------------------
+" 2026-03-26  JESUSEDM Fixed REPORT name declaration (V2→V3). Corrected
+"                      ORDER BY in DD03L discovery from fieldname to position
+"                      (ensures sample_field reflects physical column order).
+"                      Removed dead commented-out code in DISPLAY method.
+"                      Implemented row-level color coding via LVC_T_SCOL:
+"                      OK=green (col_positive), MISSING=red (col_negative),
+"                      COPY=yellow (col_total), NO_BASE=grey (col_normal).
+"                      Color column T_COLOR registered via set_color_column
+"                      and hidden from ALV grid output.
 " 2026-03-26  JESUSEDM Added nested Block B04 (Status Legend) within B03
 "                      to provide reference information for status codes.
 "                      Legend placed AFTER checkboxes for optimal UX
@@ -200,6 +209,7 @@ TYPES: BEGIN OF ty_result,
          text_en      TYPE string,
          text_fr      TYPE string,
          text_de      TYPE string,
+         t_color      TYPE lvc_t_scol,
        END OF ty_result.
 
 " ----------------------------------------------------------------------
@@ -353,7 +363,7 @@ CLASS lcl_translation_checker IMPLEMENTATION.
         WHERE tabname = @<cand>
           AND as4local = 'A'
           AND NOT fieldname LIKE '.%'
-        ORDER BY fieldname
+        ORDER BY position
         INTO TABLE @DATA(lt_fields).                 "#EC CI_NOWHERE
 
       IF sy-subrc <> 0.
@@ -536,6 +546,8 @@ CLASS lcl_translation_checker IMPLEMENTATION.
 
     " --- Convert pivot into flat result with STATUS ---
     DATA lv_status TYPE char10.
+    DATA lt_color  TYPE lvc_t_scol.
+    DATA ls_color  TYPE lvc_s_scol.
 
     LOOP AT lt_pivot ASSIGNING <pv>.
 
@@ -554,6 +566,16 @@ CLASS lcl_translation_checker IMPLEMENTATION.
         lv_status = c_status_ok.
       ENDIF.
 
+      " Build row color: empty FNAME = entire row colored
+      CLEAR: lt_color, ls_color.
+      ls_color-color-col = SWITCH #( lv_status
+        WHEN c_status_ok      THEN col_positive   " green
+        WHEN c_status_missing THEN col_negative   " red
+        WHEN c_status_copy    THEN col_total      " yellow
+        WHEN c_status_nobase  THEN col_normal     " grey
+        ELSE 0 ).
+      APPEND ls_color TO lt_color.
+
       APPEND VALUE ty_result(
         status       = lv_status
         tabname      = is_meta-tabname
@@ -563,6 +585,7 @@ CLASS lcl_translation_checker IMPLEMENTATION.
         text_en      = <pv>-text_en
         text_fr      = <pv>-text_fr
         text_de      = <pv>-text_de
+        t_color      = lt_color
       ) TO gt_result.
     ENDLOOP.
   ENDMETHOD.
@@ -648,15 +671,12 @@ CLASS lcl_translation_checker IMPLEMENTATION.
         lo_salv->get_functions( )->set_all( abap_true ).
 
         DATA(lo_cols) = lo_salv->get_columns( ).
+        lo_cols->set_color_column( 'T_COLOR' ).
 
         " Column headers
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'STATUS' ) ).
         lo_col->set_long_text( 'DE Status' ).
         lo_col->set_output_length( 10 ).
-
-*        CAST cl_salv_column_table(
-*          lo_cols->get_column( 'TABNAME' ) )->set_long_text( 'Table' ).
-*        lo_col->set_output_length( 7 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'TABNAME' ) ).
         lo_col->set_long_text( 'Table' ).
@@ -685,6 +705,9 @@ CLASS lcl_translation_checker IMPLEMENTATION.
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'TEXT_DE' ) ).
         lo_col->set_long_text( 'German (DE)' ).
         lo_col->set_output_length( 40 ).
+
+        lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'T_COLOR' ) ).
+        lo_col->set_visible( abap_false ).
 
         " List header with table count and record count
         DATA(lo_display) = lo_salv->get_display_settings( ).
@@ -737,7 +760,7 @@ INITIALIZATION.
   APPEND VALUE #( sign = 'I'  option = 'CP'  low = 'TV*'    ) TO s_tabnm.
   APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'MAKT'   ) TO s_tabnm.
   APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'CSKT'   ) TO s_tabnm.
-  APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'CEPCT' ) TO s_tabnm.
+  APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'CEPCT'  ) TO s_tabnm.
 
 AT SELECTION-SCREEN.
   " Validate that at least one status checkbox is selected
