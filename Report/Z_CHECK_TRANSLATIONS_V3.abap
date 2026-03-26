@@ -224,9 +224,9 @@ SELECTION-SCREEN BEGIN OF BLOCK b03 WITH FRAME TITLE TEXT-b03.
     p_miss   AS CHECKBOX DEFAULT 'X',
     p_copy   AS CHECKBOX DEFAULT 'X',
     p_nobase AS CHECKBOX DEFAULT 'X'.
-  
+
   SELECTION-SCREEN SKIP.
-  
+
   " Sub-block: Status legend (reference information)
   SELECTION-SCREEN BEGIN OF BLOCK b04 WITH FRAME TITLE TEXT-b04.
     SELECTION-SCREEN COMMENT /1(70) TEXT-l01.  "OK = DE exists and differs from EN
@@ -424,9 +424,9 @@ CLASS lcl_translation_checker IMPLEMENTATION.
     DATA lo_type_descr TYPE REF TO cl_abap_typedescr.
     DATA lo_tab_descr TYPE REF TO cl_abap_tabledescr.
     DATA lo_struct_descr TYPE REF TO cl_abap_structdescr.
-    
+
     lo_type_descr = cl_abap_typedescr=>describe_by_name( is_meta-tabname ).
-    
+
     " Try to cast to table descriptor first
     TRY.
         lo_tab_descr ?= lo_type_descr.
@@ -437,7 +437,7 @@ CLASS lcl_translation_checker IMPLEMENTATION.
           p_line_type  = lo_struct_descr
           p_table_kind = cl_abap_tabledescr=>tablekind_std ).
     ENDTRY.
-    
+
     DATA(lo_line_descr) = lo_tab_descr->get_table_line_type( ).
 
     " Create dynamic tables using table descriptor
@@ -654,16 +654,21 @@ CLASS lcl_translation_checker IMPLEMENTATION.
         lo_col->set_long_text( 'DE Status' ).
         lo_col->set_output_length( 10 ).
 
-        CAST cl_salv_column_table(
-          lo_cols->get_column( 'TABNAME' ) )->set_long_text( 'Table' ).
+*        CAST cl_salv_column_table(
+*          lo_cols->get_column( 'TABNAME' ) )->set_long_text( 'Table' ).
+*        lo_col->set_output_length( 7 ).
+
+        lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'TABNAME' ) ).
+        lo_col->set_long_text( 'Table' ).
+        lo_col->set_output_length( 7 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'FIELD_NAME' ) ).
         lo_col->set_long_text( 'Text Field' ).
-        lo_col->set_output_length( 15 ).
+        lo_col->set_output_length( 7 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'FIELD_LENGTH' ) ).
         lo_col->set_long_text( 'Max Length' ).
-        lo_col->set_output_length( 8 ).
+        lo_col->set_output_length( 7 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'KEY_STRING' ) ).
         lo_col->set_long_text( 'Composite Key' ).
