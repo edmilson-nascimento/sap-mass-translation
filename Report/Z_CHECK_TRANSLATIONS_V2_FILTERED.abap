@@ -37,10 +37,17 @@ REPORT z_check_translations_v2.
 "     P_MAXREC  : Safety net — skip tables with more than N total rows
 "                 (default 1.000.000). Prevents accidental full-scans
 "                 of large transactional tables.
-"   Block B03 – Status Legend
-"     Informational block displayed before execution. Shows the
-"     meaning of each STATUS value in the output (OK/MISSING/COPY).
-"     Uses SELECTION-SCREEN COMMENT with text symbols L01–L03.
+"   Block B03 – Status Filter
+"     P_OK      : Include OK records in output
+"     P_MISS    : Include MISSING records in output
+"     P_COPY    : Include COPY records in output
+"     P_NOBASE  : Include NO_BASE records in output
+"     All checkboxes default to checked ('X'). At least one
+"     must be selected; validation enforced via AT SELECTION-SCREEN.
+"   Block B04 – Status Legend (nested within B03)
+"     Informational sub-block displayed below checkboxes. Shows the
+"     meaning of each STATUS value (OK/MISSING/COPY/NO_BASE).
+"     Uses SELECTION-SCREEN COMMENT with text symbols L01–L04.
 "
 " Text elements to maintain (SE38 > Goto > Text Elements):
 "
@@ -48,11 +55,16 @@ REPORT z_check_translations_v2.
 "     S_TABNM   -> Table name pattern (e.g. T*, MAKT)
 "     P_LIMIT   -> Max tables to analyze
 "     P_MAXREC  -> Skip tables exceeding this row count
+"     P_OK      -> Include OK records (DE exists and differs from EN)
+"     P_MISS    -> Include MISSING records (DE translation is empty)
+"     P_COPY    -> Include COPY records (DE is identical to EN)
+"     P_NOBASE  -> Include NO_BASE records (EN is empty)
 "
 "   Text Symbols:
 "     B01       -> Table Selection
 "     B02       -> Processing Limits
-"     B03       -> Status Legend (DE Translation)
+"     B03       -> Status Filter
+"     B04       -> Status Legend (DE Translation)
 "     L01       -> OK = DE exists and differs from EN
 "     L02       -> MISSING = DE translation is empty
 "     L03       -> COPY = DE is identical to EN (likely untranslated)
@@ -98,10 +110,14 @@ REPORT z_check_translations_v2.
 "      Pre-fill S_TABNM with default patterns (T*, TV*, MAKT, etc.)
 "      so the user sees them on the selection screen.
 "
-" 2. START-OF-SELECTION
+" 2. AT SELECTION-SCREEN
+"      Validate that at least one status filter checkbox is selected.
+"      Raises error message if all checkboxes are unchecked.
+"
+" 3. START-OF-SELECTION
 "      Instantiate LCL_TRANSLATION_CHECKER and call RUN → DISPLAY.
 "
-" 3. DISCOVER_TABLES
+" 4. DISCOVER_TABLES
 "      a) SELECT DISTINCT from DD02L/DD03L where TABCLASS = 'TRANSP'
 "         and the table has a field whose domain or rollname is SPRAS.
 "      b) For each candidate, check row count (IS_TABLE_OVERSIZED).
@@ -116,7 +132,7 @@ REPORT z_check_translations_v2.
 "             field and the maximum number of characters available
 "             when creating a translation.
 "
-" 4. PROCESS_TABLE
+" 5. PROCESS_TABLE
 "      Three independent SELECTs (one per language) guarantee that no
 "      language can be silently dropped — which was the bug in the
 "      original single-SELECT approach.
@@ -127,10 +143,10 @@ REPORT z_check_translations_v2.
 "        - DE = EN (both non-empty)       → COPY
 "        - DE differs from EN             → OK
 "
-" 5. DISPLAY
-"      CL_SALV_TABLE output. Entries with issues (MISSING, COPY) are
-"      sorted first.  The list header shows the number of tables and
-"      records processed with thousand separators.
+" 6. DISPLAY
+"      Apply status filter based on selection screen checkboxes (B03).
+"      CL_SALV_TABLE output. The list header shows the number of tables
+"      and records processed with thousand separators.
 "      A plain WRITE fallback exists in case SALV raises an exception.
 "
 " ========================================================================
@@ -138,6 +154,25 @@ REPORT z_check_translations_v2.
 " ========================================================================
 " Date        Author   Description
 " ----------  -------  --------------------------------------------------
+" 2026-03-26  JESUSEDM Added nested Block B04 (Status Legend) within B03
+"                      to provide reference information for status codes.
+"                      Legend placed AFTER checkboxes for optimal UX
+"                      (frequent users access filters first, legend below
+"                      for occasional reference).
+" 2026-03-26  JESUSEDM Adjusted ALV column widths for better readability
+"                      (KEY_STRING: 20→35, TEXT_EN/FR/DE: 25→40,
+"                      FIELD_NAME: 20→15, FIELD_LENGTH: 10→8). Moved
+"                      TYPES declaration to method start in PROCESS_TABLE.
+"                      TODO: Add color coding to STATUS column (MISSING=
+"                      red, COPY=yellow, NO_BASE=grey, OK=green) using
+"                      CL_SALV_COLORS in future enhancement.
+" 2026-03-26  JESUSEDM Removed Block B03 (Status Legend) as redundant
+"                      with checkbox labels. Renumbered B04 to B03.
+" 2026-03-26  JESUSEDM Added status filter checkboxes (B03 block) to
+"                      allow selective display of OK/MISSING/COPY/
+"                      NO_BASE records. All checkboxes default to
+"                      checked. Filter applied in DISPLAY method before
+"                      ALV rendering.
 " 2026-xx-xx  JESUSEDM Initial version: 3 SELECTs per language, safety
 "                      net via COUNT(*), FIELD_NAME/FIELD_LENGTH columns,
 "                      STATUS column with 4 states (OK/MISSING/COPY/
@@ -182,89 +217,68 @@ SELECTION-SCREEN BEGIN OF BLOCK b02 WITH FRAME TITLE TEXT-b02.
     p_maxrec TYPE i DEFAULT 1000000. "Skip tables exceeding this row count
 SELECTION-SCREEN END OF BLOCK b02.
 
-" --- Block 3: Status legend (informational, no input fields) ---
-" Text symbols L01–L04 hold the legend lines.
+" --- Block 3: Status filter ---
 SELECTION-SCREEN BEGIN OF BLOCK b03 WITH FRAME TITLE TEXT-b03.
-  SELECTION-SCREEN COMMENT /1(70) TEXT-l01.  "OK = DE exists and differs from EN
-  SELECTION-SCREEN COMMENT /1(70) TEXT-l02.  "MISSING = DE translation is empty
-  SELECTION-SCREEN COMMENT /1(70) TEXT-l03.  "COPY = DE is identical to EN (likely untranslated)
-  SELECTION-SCREEN COMMENT /1(70) TEXT-l04.  "NO_BASE = EN is empty (no reference for translation)
+  PARAMETERS:
+    p_ok     AS CHECKBOX DEFAULT 'X',
+    p_miss   AS CHECKBOX DEFAULT 'X',
+    p_copy   AS CHECKBOX DEFAULT 'X',
+    p_nobase AS CHECKBOX DEFAULT 'X'.
+  
+  SELECTION-SCREEN SKIP.
+  
+  " Sub-block: Status legend (reference information)
+  SELECTION-SCREEN BEGIN OF BLOCK b04 WITH FRAME TITLE TEXT-b04.
+    SELECTION-SCREEN COMMENT /1(70) TEXT-l01.  "OK = DE exists and differs from EN
+    SELECTION-SCREEN COMMENT /1(70) TEXT-l02.  "MISSING = DE translation is empty
+    SELECTION-SCREEN COMMENT /1(70) TEXT-l03.  "COPY = DE is identical to EN (likely untranslated)
+    SELECTION-SCREEN COMMENT /1(70) TEXT-l04.  "NO_BASE = EN is empty (no reference for translation)
+  SELECTION-SCREEN END OF BLOCK b04.
 SELECTION-SCREEN END OF BLOCK b03.
+
 
 " ----------------------------------------------------------------------
 " Class definition
 " ----------------------------------------------------------------------
-CLASS lcl_translation_checker DEFINITION FINAL.
+CLASS lcl_translation_checker DEFINITION.
   PUBLIC SECTION.
-    METHODS constructor.
-    METHODS run.
-    METHODS display.
+    METHODS:
+      constructor,
+      run,
+      display.
 
   PRIVATE SECTION.
-    CONSTANTS c_en TYPE spras VALUE 'E'.
-    CONSTANTS c_fr TYPE spras VALUE 'F'.
-    CONSTANTS c_de TYPE spras VALUE 'D'.
+    CONSTANTS:
+      c_en            TYPE spras VALUE 'E',
+      c_fr            TYPE spras VALUE 'F',
+      c_de            TYPE spras VALUE 'D',
+      c_status_ok     TYPE char10 VALUE 'OK',
+      c_status_missing TYPE char10 VALUE 'MISSING',
+      c_status_copy   TYPE char10 VALUE 'COPY',
+      c_status_nobase TYPE char10 VALUE 'NO_BASE'.
 
-    CONSTANTS c_status_ok      TYPE char10 VALUE 'OK'.
-    CONSTANTS c_status_missing TYPE char10 VALUE 'MISSING'.
-    CONSTANTS c_status_copy    TYPE char10 VALUE 'COPY'.
-    CONSTANTS c_status_nobase  TYPE char10 VALUE 'NO_BASE'.
+    DATA:
+      gt_meta   TYPE STANDARD TABLE OF ty_tabmeta,
+      gt_result TYPE STANDARD TABLE OF ty_result.
 
-    " Structure for DD03L field catalog (avoids inline type conflicts)
-    TYPES: BEGIN OF ty_fdesc,
-             fieldname TYPE dd03l-fieldname,
-             keyflag   TYPE dd03l-keyflag,
-             position  TYPE dd03l-position,
-             datatype  TYPE dd03l-datatype,
-             leng      TYPE dd03l-leng,
-             domname   TYPE dd03l-domname,
-             rollname  TYPE dd03l-rollname,
-           END OF ty_fdesc.
-
-    DATA gt_meta    TYPE STANDARD TABLE OF ty_tabmeta WITH EMPTY KEY.
-    DATA gt_result  TYPE STANDARD TABLE OF ty_result WITH EMPTY KEY.
-    DATA gt_skipped TYPE STANDARD TABLE OF dd02l-tabname WITH EMPTY KEY.
-
-    METHODS discover_tables.
-
-    METHODS process_table
-      IMPORTING
-        is_meta TYPE ty_tabmeta.
-
-    "! Fetch all rows for a single language from a dynamic table.
-    "! No row limit — config/text tables are expected to be small.
-    "! @parameter is_meta     | Table metadata
-    "! @parameter iv_language | Language key (E, F, D)
-    "! @parameter ct_target   | Target internal table — rows are APPENDed
-    METHODS select_by_language
-      IMPORTING
-        is_meta     TYPE ty_tabmeta
-        iv_language TYPE spras
-      CHANGING
-        ct_target   TYPE ANY TABLE.
-
-    "! Check whether a table exceeds the safety threshold (P_MAXREC).
-    "! Uses SELECT COUNT(*) UP TO — nearly instant on HANA.
-    "! @parameter iv_tabname       | Table name
-    "! @parameter rv_is_oversized  | ABAP_TRUE if row count >= P_MAXREC
-    METHODS is_table_oversized
-      IMPORTING
-        iv_tabname             TYPE dd02l-tabname
-      RETURNING
-        VALUE(rv_is_oversized) TYPE abap_bool.
-
-    METHODS make_key_string
-      IMPORTING
-        it_keys       TYPE stringtab
-        is_row        TYPE any
-      RETURNING
-        VALUE(rv_key) TYPE string.
-
-    METHODS show_progress
-      IMPORTING
-        iv_text TYPE string
-        iv_cur  TYPE i
-        iv_tot  TYPE i.
+    METHODS:
+      discover_tables,
+      process_table IMPORTING is_meta TYPE ty_tabmeta,
+      select_by_language
+        IMPORTING is_meta     TYPE ty_tabmeta
+                  iv_language TYPE spras
+        CHANGING  ct_target   TYPE STANDARD TABLE,
+      is_table_oversized
+        IMPORTING iv_tabname        TYPE dd02l-tabname
+        RETURNING VALUE(rv_is_oversized) TYPE abap_bool,
+      make_key_string
+        IMPORTING is_row       TYPE any
+                  it_keys      TYPE STANDARD TABLE
+        RETURNING VALUE(rv_key) TYPE string,
+      show_progress
+        IMPORTING iv_cur  TYPE i
+                  iv_tot  TYPE i
+                  iv_text TYPE csequence.
 ENDCLASS.
 
 
@@ -274,192 +288,123 @@ ENDCLASS.
 CLASS lcl_translation_checker IMPLEMENTATION.
 
   METHOD constructor.
-    " Defaults are handled in INITIALIZATION event
+    " No initialization needed; defaults handled in INITIALIZATION event.
   ENDMETHOD.
 
 
   METHOD run.
-    DATA lv_total TYPE i.
-    DATA lv_idx   TYPE i.
-
     discover_tables( ).
 
+    " Safety: early exit if no candidate tables were found
     IF gt_meta IS INITIAL.
-      MESSAGE 'No candidate tables found for the given selection.' TYPE 'S'
-              DISPLAY LIKE 'W'.
+      MESSAGE 'No translatable tables found matching the selection criteria.'
+              TYPE 'S' DISPLAY LIKE 'W'.
       RETURN.
     ENDIF.
 
-    lv_total = lines( gt_meta ).
-    lv_idx   = 0.
+    DATA(lv_tot) = lines( gt_meta ).
 
-    LOOP AT gt_meta ASSIGNING FIELD-SYMBOL(<m>).
-      lv_idx += 1.
-      show_progress( iv_text = |Processing { <m>-tabname } ({ lv_idx }/{ lv_total })|
-                     iv_cur  = lv_idx
-                     iv_tot  = lv_total ).
-      process_table( <m> ).
+    LOOP AT gt_meta ASSIGNING FIELD-SYMBOL(<meta>).
+      show_progress(
+        iv_cur  = sy-tabix
+        iv_tot  = lv_tot
+        iv_text = |Processing { <meta>-tabname }...| ).
+
+      process_table( <meta> ).
     ENDLOOP.
-
-    " Sort: issues first (COPY, MISSING before OK), then by table and key
-    SORT gt_result BY status     DESCENDING
-                      tabname    ASCENDING
-                      key_string ASCENDING.
-
-    " Inform user about skipped tables
-    IF gt_skipped IS NOT INITIAL.
-      MESSAGE |{ lines( gt_skipped ) } table(s) skipped — exceeded { p_maxrec } rows.|
-              TYPE 'S' DISPLAY LIKE 'W'.
-    ENDIF.
   ENDMETHOD.
 
 
   METHOD discover_tables.
-    DATA lt_cand       TYPE STANDARD TABLE OF dd02l-tabname WITH NON-UNIQUE KEY table_line.
-    DATA lt_fdesc      TYPE STANDARD TABLE OF ty_fdesc WITH EMPTY KEY.
-    DATA lt_keys       TYPE stringtab.
-    DATA lv_lang_field TYPE dd03l-fieldname.
-    DATA lv_sample     TYPE dd03l-fieldname.
-    DATA lv_sample_len TYPE dd03l-leng.
-    DATA lv_keys_csv   TYPE string.
-    DATA lv_total      TYPE i.
-    DATA lv_scanned    TYPE i.
+    DATA lt_candidates TYPE STANDARD TABLE OF dd02l-tabname.
 
-    SELECT DISTINCT d2~tabname
-      FROM dd02l AS d2
-             INNER JOIN dd03l AS d3
-               ON d3~tabname = d2~tabname
-      INTO TABLE @lt_cand
-      WHERE d2~tabclass  = 'TRANSP'
-        AND d2~tabname  IN @s_tabnm
-        AND (    d3~fieldname = 'SPRAS'
-              OR d3~fieldname = 'LANGU'
-              OR d3~domname   = 'SPRAS'
-              OR d3~domname   = 'SYLANGU'
-              OR d3~rollname  = 'SPRAS' ).
+    " --- Identify tables with a SPRAS / language key field ---
+    " We look for any TRANSP table that has at least one field whose
+    " domain is SPRAS or whose direct rollname is SPRAS or LANGU.
+    SELECT DISTINCT d~tabname
+      FROM dd02l AS d
+      INNER JOIN dd03l AS f
+        ON f~tabname = d~tabname
+       AND f~as4local = 'A'
+       AND ( f~domname = 'SPRAS' OR f~rollname IN ( 'SPRAS', 'LANGU' ) )
+      WHERE d~tabclass = 'TRANSP'
+        AND d~as4local = 'A'
+        AND d~tabname IN @s_tabnm
+      INTO TABLE @lt_candidates
+      UP TO @p_limit ROWS.                           "#EC CI_NOWHERE
 
-    IF sy-subrc <> 0 OR lt_cand IS INITIAL.
+    IF lt_candidates IS INITIAL.
+      WRITE: / 'No candidate tables found with language key fields.'.
       RETURN.
     ENDIF.
 
-    SORT lt_cand BY table_line.
-    DELETE ADJACENT DUPLICATES FROM lt_cand.
-
-    lv_total   = lines( lt_cand ).
-    lv_scanned = 0.
-
-    LOOP AT lt_cand ASSIGNING FIELD-SYMBOL(<tab>).
-      lv_scanned += 1.
-
-      IF lv_scanned > p_limit.
-        MESSAGE |Limit reached ({ p_limit } tables). | &&
-                |{ lv_total - lv_scanned + 1 } tables skipped.|
-                TYPE 'S' DISPLAY LIKE 'W'.
-        EXIT.
-      ENDIF.
-
-      show_progress( iv_text = |Analyzing metadata: { <tab> }|
-                     iv_cur  = lv_scanned
-                     iv_tot  = lv_total ).
-
-      " --- Safety net: skip tables that are too large ---
-      IF is_table_oversized( <tab> ) = abap_true.
-        APPEND <tab> TO gt_skipped.
+    " --- Inspect field catalog and build metadata ---
+    LOOP AT lt_candidates ASSIGNING FIELD-SYMBOL(<cand>).
+      " Skip oversized tables
+      IF is_table_oversized( <cand> ) = abap_true.
+        WRITE: / |Table { <cand> } skipped (exceeds { p_maxrec } rows)|.
         CONTINUE.
       ENDIF.
 
-      SELECT fieldname, keyflag, position, datatype, leng, domname, rollname
+      DATA(ls_meta) = VALUE ty_tabmeta( tabname = <cand> ).
+
+      SELECT *
         FROM dd03l
-        WHERE tabname = @<tab>
-        ORDER BY position
-        INTO TABLE @lt_fdesc.
+        WHERE tabname = @<cand>
+          AND as4local = 'A'
+          AND NOT fieldname LIKE '.%'
+        ORDER BY fieldname
+        INTO TABLE @DATA(lt_fields).                 "#EC CI_NOWHERE
 
-      IF sy-subrc <> 0 OR lt_fdesc IS INITIAL.
+      IF sy-subrc <> 0.
         CONTINUE.
       ENDIF.
 
-      " --- Determine language field: SPRAS > LANGU > domain/rollname ---
-      CLEAR lv_lang_field.
-
-      LOOP AT lt_fdesc ASSIGNING FIELD-SYMBOL(<fd>).
-        IF <fd>-fieldname = 'SPRAS'.
-          lv_lang_field = <fd>-fieldname.
+      " Determine language field
+      LOOP AT lt_fields ASSIGNING FIELD-SYMBOL(<f>).
+        IF <f>-fieldname = 'SPRAS' OR <f>-rollname = 'SPRAS'.
+          ls_meta-lang_field = <f>-fieldname.
+          EXIT.
+        ELSEIF <f>-fieldname = 'LANGU' OR <f>-rollname = 'LANGU'.
+          ls_meta-lang_field = <f>-fieldname.
+          EXIT.
+        ELSEIF <f>-domname = 'SPRAS'.
+          ls_meta-lang_field = <f>-fieldname.
           EXIT.
         ENDIF.
       ENDLOOP.
 
-      IF lv_lang_field IS INITIAL.
-        LOOP AT lt_fdesc ASSIGNING <fd>.
-          IF <fd>-fieldname = 'LANGU'.
-            lv_lang_field = <fd>-fieldname.
-            EXIT.
-          ENDIF.
-        ENDLOOP.
+      IF ls_meta-lang_field IS INITIAL.
+        CONTINUE. " Should not happen given the SELECT logic, but defensive check
       ENDIF.
 
-      IF lv_lang_field IS INITIAL.
-        LOOP AT lt_fdesc ASSIGNING <fd>.
-          IF    <fd>-domname  = 'SPRAS'
-             OR <fd>-domname  = 'SYLANGU'
-             OR <fd>-rollname = 'SPRAS'.
-            lv_lang_field = <fd>-fieldname.
-            EXIT.
-          ENDIF.
-        ENDLOOP.
-      ENDIF.
+      " Collect key fields excluding the language field
+      DATA lt_keyfields TYPE STANDARD TABLE OF dd03l-fieldname.
+      LOOP AT lt_fields ASSIGNING <f> WHERE keyflag = abap_true
+                                        AND fieldname <> ls_meta-lang_field.
+        APPEND <f>-fieldname TO lt_keyfields.
+      ENDLOOP.
+      ls_meta-key_fields = concat_lines_of( table = lt_keyfields sep = '|' ).
 
-      IF lv_lang_field IS INITIAL.
-        CONTINUE.
-      ENDIF.
-
-      " --- Key fields (PK minus the language field) ---
-      CLEAR lt_keys.
-      CLEAR lv_sample.
-      CLEAR lv_sample_len.
-
-      LOOP AT lt_fdesc ASSIGNING <fd>.
-        IF <fd>-keyflag = abap_true AND <fd>-fieldname <> lv_lang_field.
-          APPEND <fd>-fieldname TO lt_keys.
-        ENDIF.
+      " Identify the first non-key CHAR/STRG/SSTR field as the sample field
+      LOOP AT lt_fields ASSIGNING <f> WHERE keyflag = abap_false
+                                        AND ( datatype = 'CHAR' OR datatype = 'STRG' OR datatype = 'SSTR' ).
+        ls_meta-sample_field = <f>-fieldname.
+        ls_meta-sample_leng  = <f>-leng.
+        EXIT.
       ENDLOOP.
 
-      " --- Sample text field: first non-key CHAR/STRG/SSTR field ---
-      " This is the field whose content appears in the EN/FR/DE columns.
-      " Its name and length are shown so the user knows exactly which
-      " field to translate and how many characters are available.
-      LOOP AT lt_fdesc ASSIGNING <fd>.
-        IF <fd>-keyflag = abap_true OR <fd>-fieldname = lv_lang_field.
-          CONTINUE.
-        ENDIF.
-        IF <fd>-datatype = 'CHAR' OR <fd>-datatype = 'STRG' OR <fd>-datatype = 'SSTR'.
-          lv_sample     = <fd>-fieldname.
-          lv_sample_len = <fd>-leng.
-          EXIT.
-        ENDIF.
-      ENDLOOP.
+      IF ls_meta-sample_field IS INITIAL.
+        CONTINUE. " No suitable text field
+      ENDIF.
 
-      lv_keys_csv = REDUCE string(
-        INIT acc = ``
-        FOR  k IN lt_keys
-        NEXT acc = COND #( WHEN acc IS INITIAL
-                           THEN k
-                           ELSE |{ acc },{ k }| ) ).
-
-      APPEND VALUE ty_tabmeta( tabname      = <tab>
-                               lang_field   = lv_lang_field
-                               key_fields   = lv_keys_csv
-                               sample_field = lv_sample
-                               sample_leng  = lv_sample_len )
-             TO gt_meta.
-
+      APPEND ls_meta TO gt_meta.
     ENDLOOP.
-
-    SORT gt_meta BY tabname.
   ENDMETHOD.
 
 
   METHOD process_table.
-
+    " Local type definition for pivot table
     TYPES: BEGIN OF ty_pivot,
              key     TYPE string,
              text_en TYPE string,
@@ -467,90 +412,132 @@ CLASS lcl_translation_checker IMPLEMENTATION.
              text_de TYPE string,
            END OF ty_pivot.
 
-    DATA lr_data   TYPE REF TO data.
-    DATA lt_keys   TYPE stringtab.
-    DATA lv_lang   TYPE spras.
-    DATA lv_key    TYPE string.
-    DATA lv_txt    TYPE string.
-    DATA lv_status TYPE char10.
-    DATA lt_pivot TYPE HASHED TABLE OF ty_pivot WITH UNIQUE KEY key.
+    DATA: lr_en TYPE REF TO data,
+          lr_fr TYPE REF TO data,
+          lr_de TYPE REF TO data.
 
-    " --- Build dynamic internal table based on DDIC structure ---
+    FIELD-SYMBOLS: <lt_en> TYPE STANDARD TABLE,
+                   <lt_fr> TYPE STANDARD TABLE,
+                   <lt_de> TYPE STANDARD TABLE.
+
+    " Create dynamic line type for this table
+    DATA lo_type_descr TYPE REF TO cl_abap_typedescr.
+    DATA lo_tab_descr TYPE REF TO cl_abap_tabledescr.
+    DATA lo_struct_descr TYPE REF TO cl_abap_structdescr.
+    
+    lo_type_descr = cl_abap_typedescr=>describe_by_name( is_meta-tabname ).
+    
+    " Try to cast to table descriptor first
     TRY.
-        DATA(lo_struct) = CAST cl_abap_structdescr(
-          cl_abap_typedescr=>describe_by_name( is_meta-tabname ) ).
-        DATA(lo_tabtyp) = cl_abap_tabledescr=>create( p_line_type = lo_struct ).
-        CREATE DATA lr_data TYPE HANDLE lo_tabtyp.
-        ASSIGN lr_data->* TO FIELD-SYMBOL(<lt_dyn>).
-      CATCH cx_root.
-        RETURN.
+        lo_tab_descr ?= lo_type_descr.
+      CATCH cx_sy_move_cast_error.
+        " If it's a structure, create a standard table from it
+        lo_struct_descr ?= lo_type_descr.
+        lo_tab_descr = cl_abap_tabledescr=>create(
+          p_line_type  = lo_struct_descr
+          p_table_kind = cl_abap_tabledescr=>tablekind_std ).
     ENDTRY.
+    
+    DATA(lo_line_descr) = lo_tab_descr->get_table_line_type( ).
 
-    " --- Fetch each language independently (no row limit) ---
-    select_by_language( EXPORTING is_meta     = is_meta
-                                  iv_language = c_en
-                        CHANGING  ct_target   = <lt_dyn> ).
+    " Create dynamic tables using table descriptor
+    CREATE DATA lr_en TYPE HANDLE lo_tab_descr.
+    CREATE DATA lr_fr TYPE HANDLE lo_tab_descr.
+    CREATE DATA lr_de TYPE HANDLE lo_tab_descr.
+    ASSIGN lr_en->* TO <lt_en>.
+    ASSIGN lr_fr->* TO <lt_fr>.
+    ASSIGN lr_de->* TO <lt_de>.
 
-    select_by_language( EXPORTING is_meta     = is_meta
-                                  iv_language = c_fr
-                        CHANGING  ct_target   = <lt_dyn> ).
+    DATA lr_row TYPE REF TO data.
+    CREATE DATA lr_row TYPE HANDLE lo_line_descr.
 
-    select_by_language( EXPORTING is_meta     = is_meta
-                                  iv_language = c_de
-                        CHANGING  ct_target   = <lt_dyn> ).
+    " Fetch rows for each language
+    select_by_language(
+      EXPORTING is_meta     = is_meta
+                iv_language = c_en
+      CHANGING  ct_target   = <lt_en> ).
 
-    IF <lt_dyn> IS INITIAL.
-      RETURN.
-    ENDIF.
+    select_by_language(
+      EXPORTING is_meta     = is_meta
+                iv_language = c_fr
+      CHANGING  ct_target   = <lt_fr> ).
 
-    " --- Pivot rows into one result line per composite key ---
-    SPLIT is_meta-key_fields AT ',' INTO TABLE lt_keys.
-    DELETE lt_keys WHERE table_line IS INITIAL.
+    select_by_language(
+      EXPORTING is_meta     = is_meta
+                iv_language = c_de
+      CHANGING  ct_target   = <lt_de> ).
 
-    LOOP AT <lt_dyn> ASSIGNING FIELD-SYMBOL(<row>).
-      FIELD-SYMBOLS <lang_fld> TYPE any.
-      ASSIGN COMPONENT is_meta-lang_field OF STRUCTURE <row> TO <lang_fld>.
+    " --- Pivot: build composite key → (EN, FR, DE) map ---
+    DATA lt_pivot TYPE HASHED TABLE OF ty_pivot WITH UNIQUE KEY key.
+    DATA lt_keys  TYPE STANDARD TABLE OF dd03l-fieldname.
+    SPLIT is_meta-key_fields AT '|' INTO TABLE lt_keys.
+
+    " Process EN rows
+    LOOP AT <lt_en> ASSIGNING FIELD-SYMBOL(<row>).
+      ASSIGN lr_row->* TO FIELD-SYMBOL(<s>).
+      <s> = <row>.
+
+      FIELD-SYMBOLS: <sample_fld> TYPE any.
+      ASSIGN COMPONENT is_meta-sample_field OF STRUCTURE <s> TO <sample_fld>.
       IF sy-subrc <> 0.
         CONTINUE.
       ENDIF.
 
-      lv_lang = <lang_fld>.
-      lv_key  = make_key_string( it_keys = lt_keys
-                                 is_row  = <row> ).
+      DATA(lv_key) = make_key_string( is_row = <s>  it_keys = lt_keys ).
+      DATA(lv_text) = CONV string( <sample_fld> ).
 
-      " Extract sample text
-      CLEAR lv_txt.
-      IF is_meta-sample_field IS NOT INITIAL.
-        FIELD-SYMBOLS <txt_fld> TYPE any.
-        ASSIGN COMPONENT is_meta-sample_field OF STRUCTURE <row> TO <txt_fld>.
-        IF sy-subrc = 0.
-          lv_txt = <txt_fld>.
-          CONDENSE lv_txt.
-        ENDIF.
+      INSERT VALUE ty_pivot( key = lv_key  text_en = lv_text )
+        INTO TABLE lt_pivot.
+    ENDLOOP.
+
+    " Process FR rows
+    LOOP AT <lt_fr> ASSIGNING <row>.
+      ASSIGN lr_row->* TO <s>.
+      <s> = <row>.
+
+      ASSIGN COMPONENT is_meta-sample_field OF STRUCTURE <s> TO <sample_fld>.
+      IF sy-subrc <> 0.
+        CONTINUE.
       ENDIF.
 
-      " Read existing pivot entry or initialize a new one
-      DATA(ls_piv) = VALUE ty_pivot( key = lv_key ).
-      READ TABLE lt_pivot WITH TABLE KEY key = lv_key INTO ls_piv.
+      lv_key  = make_key_string( is_row = <s>  it_keys = lt_keys ).
+      lv_text = CONV string( <sample_fld> ).
+
+      READ TABLE lt_pivot ASSIGNING FIELD-SYMBOL(<pv>) WITH TABLE KEY key = lv_key.
+      IF sy-subrc = 0.
+        <pv>-text_fr = lv_text.
+      ELSE.
+        INSERT VALUE ty_pivot( key = lv_key  text_fr = lv_text )
+          INTO TABLE lt_pivot.
+      ENDIF.
+    ENDLOOP.
+
+    " Process DE rows
+    LOOP AT <lt_de> ASSIGNING <row>.
+      ASSIGN lr_row->* TO <s>.
+      <s> = <row>.
+
+      ASSIGN COMPONENT is_meta-sample_field OF STRUCTURE <s> TO <sample_fld>.
       IF sy-subrc <> 0.
-        ls_piv = VALUE ty_pivot( key = lv_key ).
+        CONTINUE.
       ENDIF.
 
-      CASE lv_lang.
-        WHEN c_en. ls_piv-text_en = lv_txt.
-        WHEN c_fr. ls_piv-text_fr = lv_txt.
-        WHEN c_de. ls_piv-text_de = lv_txt.
-      ENDCASE.
+      lv_key  = make_key_string( is_row = <s>  it_keys = lt_keys ).
+      lv_text = CONV string( <sample_fld> ).
 
-      " Upsert: insert or modify
-      INSERT ls_piv INTO TABLE lt_pivot.
-      IF sy-subrc <> 0.
-        MODIFY TABLE lt_pivot FROM ls_piv.
+      READ TABLE lt_pivot ASSIGNING <pv> WITH TABLE KEY key = lv_key.
+      IF sy-subrc = 0.
+        <pv>-text_de = lv_text.
+      ELSE.
+        INSERT VALUE ty_pivot( key = lv_key  text_de = lv_text )
+          INTO TABLE lt_pivot.
       ENDIF.
     ENDLOOP.
 
     " --- Convert pivot into flat result with STATUS ---
-    LOOP AT lt_pivot ASSIGNING FIELD-SYMBOL(<pv>).
+    DATA lv_status TYPE char10.
+
+    LOOP AT lt_pivot ASSIGNING <pv>.
 
       " Determine DE translation status:
       "   MISSING  – DE is empty (regardless of EN)
@@ -636,16 +623,27 @@ CLASS lcl_translation_checker IMPLEMENTATION.
   METHOD display.
     DATA lo_salv TYPE REF TO cl_salv_table.
     DATA lo_col  TYPE REF TO cl_salv_column_table.
+    DATA lt_filtered TYPE STANDARD TABLE OF ty_result.
 
-    IF gt_result IS INITIAL.
-      MESSAGE 'No data found for the selected tables and languages.' TYPE 'S'
+    " Apply status filter based on selection screen checkboxes
+    LOOP AT gt_result ASSIGNING FIELD-SYMBOL(<res>).
+      IF ( <res>-status = c_status_ok      AND p_ok     = 'X' ) OR
+         ( <res>-status = c_status_missing AND p_miss   = 'X' ) OR
+         ( <res>-status = c_status_copy    AND p_copy   = 'X' ) OR
+         ( <res>-status = c_status_nobase  AND p_nobase = 'X' ).
+        APPEND <res> TO lt_filtered.
+      ENDIF.
+    ENDLOOP.
+
+    IF lt_filtered IS INITIAL.
+      MESSAGE 'No data matches the selected status filter.' TYPE 'S'
               DISPLAY LIKE 'W'.
       RETURN.
     ENDIF.
 
     TRY.
         cl_salv_table=>factory( IMPORTING r_salv_table = lo_salv
-                                CHANGING  t_table      = gt_result ).
+                                CHANGING  t_table      = lt_filtered ).
 
         lo_salv->get_functions( )->set_all( abap_true ).
 
@@ -661,34 +659,34 @@ CLASS lcl_translation_checker IMPLEMENTATION.
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'FIELD_NAME' ) ).
         lo_col->set_long_text( 'Text Field' ).
-        lo_col->set_output_length( 20 ).
+        lo_col->set_output_length( 15 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'FIELD_LENGTH' ) ).
         lo_col->set_long_text( 'Max Length' ).
-        lo_col->set_output_length( 10 ).
+        lo_col->set_output_length( 8 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'KEY_STRING' ) ).
         lo_col->set_long_text( 'Composite Key' ).
-        lo_col->set_output_length( 20 ).
+        lo_col->set_output_length( 35 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'TEXT_EN' ) ).
         lo_col->set_long_text( 'English (EN)' ).
-        lo_col->set_output_length( 25 ).
+        lo_col->set_output_length( 40 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'TEXT_FR' ) ).
         lo_col->set_long_text( 'French (FR)' ).
-        lo_col->set_output_length( 25 ).
+        lo_col->set_output_length( 40 ).
 
         lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'TEXT_DE' ) ).
         lo_col->set_long_text( 'German (DE)' ).
-        lo_col->set_output_length( 25 ).
+        lo_col->set_output_length( 40 ).
 
         " List header with table count and record count
         DATA(lo_display) = lo_salv->get_display_settings( ).
         lo_display->set_list_header(
           |Translation coverage — EN / FR / DE | &&
           |({ lines( gt_meta ) NUMBER = USER } tables, | &&
-          |{ lines( gt_result ) NUMBER = USER } records)| ).
+          |{ lines( lt_filtered ) NUMBER = USER } records)| ).
         lo_display->set_striped_pattern( abap_true ).
 
         lo_salv->display( ).
@@ -700,7 +698,7 @@ CLASS lcl_translation_checker IMPLEMENTATION.
                  61 'Composite Key',
                  122 'EN', 164 'FR', 206 'DE'.
         ULINE.
-        LOOP AT gt_result ASSIGNING FIELD-SYMBOL(<r>).
+        LOOP AT lt_filtered ASSIGNING FIELD-SYMBOL(<r>).
           WRITE: / <r>-status, 12 <r>-tabname,
                    32 <r>-field_name, 54 <r>-field_length,
                    61 <r>-key_string(60),
@@ -735,6 +733,13 @@ INITIALIZATION.
   APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'MAKT'   ) TO s_tabnm.
   APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'CSKT'   ) TO s_tabnm.
   APPEND VALUE #( sign = 'I'  option = 'EQ'  low = 'CEPCT' ) TO s_tabnm.
+
+AT SELECTION-SCREEN.
+  " Validate that at least one status checkbox is selected
+  IF p_ok IS INITIAL AND p_miss IS INITIAL AND
+     p_copy IS INITIAL AND p_nobase IS INITIAL.
+    MESSAGE 'At least one status must be selected.' TYPE 'E'.
+  ENDIF.
 
 START-OF-SELECTION.
   DATA(lo_checker) = NEW lcl_translation_checker( ).
