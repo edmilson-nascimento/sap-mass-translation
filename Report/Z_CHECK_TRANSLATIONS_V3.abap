@@ -706,8 +706,8 @@ CLASS lcl_translation_checker IMPLEMENTATION.
         lo_col->set_long_text( 'German (DE)' ).
         lo_col->set_output_length( 40 ).
 
-        lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'T_COLOR' ) ).
-        lo_col->set_visible( abap_false ).
+        " T_COLOR is a deep type (LVC_T_SCOL) — not in the SALV column
+        " catalog; set_color_column registers it internally, no get_column needed.
 
         " List header with table count and record count
         DATA(lo_display) = lo_salv->get_display_settings( ).
@@ -722,16 +722,28 @@ CLASS lcl_translation_checker IMPLEMENTATION.
       CATCH cx_salv_not_found
             cx_salv_msg.
         " Fallback: plain WRITE list
+        " STRING fields cannot be accessed with a fixed length offset (n) if
+        " the string is shorter — use intermediate CHAR variables to avoid
+        " CX_SY_RANGE_OUT_OF_BOUNDS.
+        DATA lv_wkey TYPE c LENGTH 60.
+        DATA lv_wen  TYPE c LENGTH 40.
+        DATA lv_wfr  TYPE c LENGTH 40.
+        DATA lv_wde  TYPE c LENGTH 40.
+
         WRITE: / 'Status', 12 'Table', 32 'Field', 54 'Len',
                  61 'Composite Key',
                  122 'EN', 164 'FR', 206 'DE'.
         ULINE.
         LOOP AT lt_filtered ASSIGNING FIELD-SYMBOL(<r>).
+          lv_wkey = <r>-key_string.
+          lv_wen  = <r>-text_en.
+          lv_wfr  = <r>-text_fr.
+          lv_wde  = <r>-text_de.
           WRITE: / <r>-status, 12 <r>-tabname,
                    32 <r>-field_name, 54 <r>-field_length,
-                   61 <r>-key_string(60),
-                   122 <r>-text_en(40), 164 <r>-text_fr(40),
-                   206 <r>-text_de(40).
+                   61 lv_wkey,
+                   122 lv_wen, 164 lv_wfr,
+                   206 lv_wde.
         ENDLOOP.
     ENDTRY.
   ENDMETHOD.
