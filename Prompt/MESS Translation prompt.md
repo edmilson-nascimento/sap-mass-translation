@@ -1,9 +1,7 @@
 # SAP S/4HANA Localization — XLF Translation Prompt Template
 
 > **Purpose:** Reusable prompt for mass translation of Z* custom objects via XLF (XLIFF 1.2) files, for import into SAP via LXE_MASTER.
->
 > **Version:** 3.1 — The XML & QA Safe Edition
->
 > **Context:** SAP S/4HANA 2023 Rollout Project — EN→DE Localization
 
 ---
@@ -12,7 +10,7 @@
 
 1. Start a new chat with the AI (Claude/Gemini/ChatGPT).
 2. Upload the `.xlf` file exported from LXE_MASTER.
-3. Paste the prompt below (adapt fields in `[brackets]` as needed).
+3. Paste the prompt below.
 4. *Tip: You can remove the Changelog and Usage Notes below the prompt to save AI context window space.*
 5. Import the generated file back into LXE_MASTER.
 
