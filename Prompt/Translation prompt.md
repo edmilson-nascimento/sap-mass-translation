@@ -2,7 +2,7 @@
 
 > **Purpose:** Reusable prompt for mass translation of Z* custom objects via XLF (XLIFF 1.2) files, for import into SAP via LXE_MASTER.
 >
-> **Version:** 3.0 — The Ultimate XML-Safe Edition
+> **Version:** 3.1 — The XML & QA Safe Edition
 >
 > **Context:** SAP S/4HANA 2023 Rollout Project — EN→DE Localization
 
@@ -76,7 +76,11 @@ The SAP LXE_MASTER export encodes dynamic ampersand placeholders as XML entities
 <target state="translated">Eingabeparameter &amp;1 ist erforderlich.</target>
 
 #### ❌ WRONG Examples (DO NOT DO THIS):
-<target state="translated">Parameter & fehlt in Tabelle TVARVC</target> <target state="translated">Parameter und fehlt in Tabelle TVARVC</target> ### 3. Character Limit & Counting Math (STRICT 73-CHAR LIMIT)
+```xml
+<target state="translated">Parameter & fehlt in Tabelle TVARVC</target> <target state="translated">Parameter und fehlt in Tabelle TVARVC</target> ```
+<target state="translated">Parameter & fehlt in Tabelle TVARVC</target> <target state="translated">Parameter und fehlt in Tabelle TVARVC</target> ```
+
+### 3. Character Limit & Counting Math (STRICT 73-CHAR LIMIT)
 
 **CRITICAL COUNTING RULE FOR PLACEHOLDERS:** The 73-character limit applies to the RENDERED text in SAP, not the raw XML string length. 
 - The XML entity `&amp;` counts as exactly ONE (1) character (`&`).
@@ -108,22 +112,42 @@ No English words are allowed in the German target text. This causes semantic err
 ### 5. Technical Names and SAP Transactions
 Do NOT translate: transaction codes (SE91, SLG1, etc.), table names (TVARVC, etc.), acronyms (RFC, BOM, MRP, EWM, GHS, etc.), or system names ("SAP", "ABAP").
 
-## Output Format
+### 6. Anti-Copy-Paste Rule (CRITICAL)
+The `<target>` text MUST NEVER be identical to the `<source>` text, EXCEPT when the string consists ONLY of placeholders, numbers, and/or formatting punctuation (e.g., `&amp;1 &amp;2 &amp;3 &amp;4`, `---`, `> 100`). If the `<source>` contains alphanumeric English words, the `<target>` MUST be grammatically completely different (translated into pure German).
 
-Generate a complete, valid `.xlf` file.
-- Preserve EXACTLY the XML structure of the original file (`<file>` attributes, `<trans-unit>` structure).
-- Only modify the text inside `<target>` and change its attribute to `state="translated"`.
-- Output as plain text inside a single code block so it can be easily copied. Do not truncate the output.
+## Output Format & XML Structure (STRICT)
+
+You must output a valid XLIFF 1.2 file. Modifying the XML structure incorrectly will cause fatal import errors in SAP LXE_MASTER. Follow these exact rules for EVERY `<trans-unit>` block:
+
+1. **The `<trans-unit>` tag:** - MUST contain `approved="yes"`. If the original says `approved="no"` or if the attribute is missing, force it to `approved="yes"`.
+   - DO NOT modify any other attributes (`maxwidth`, `id`, `resname`, `size-unit`).
+2. **The `<source>` tag:**
+   - DO NOT modify this tag or its text content under any circumstances.
+3. **The `<target>` tag (CRITICAL):**
+   - MUST immediately follow the `</source>` tag.
+   - If the original file DOES NOT have a `<target>` tag, you MUST CREATE IT.
+   - MUST contain the attribute `state="translated"`. Remove any other state like "needs-review-translation" or "new".
+   - The translated German text goes inside this tag.
+
+**Example of the Expected Final Structure:**
+```xml
+<trans-unit size-unit="char" approved="yes" maxwidth="73" id="TEXT" resname="MESS//ZPP 000//TEXT">
+  <source>Original English Text &amp;1</source>
+  <target state="translated">Pure German Text &amp;1</target>
+</trans-unit>
+```
 
 ## Execution Instructions
 
 1. For EACH translation unit in the provided file:
-   a. Translate the `<source>` text to PURE German (zero English words, correct prepositions).
-   b. Copy placeholders EXACTLY using XML entities (e.g., `&amp;1`).
-   c. Count the rendered characters (remembering `&amp;1` = 2 chars). If > 73, compress using strategies.
-   d. Set translation in `<target state="translated">`.
-2. Validate final XML syntax (no loose `&` characters).
+   a. Apply the structural rules defined in "Output Format" (`approved="yes"`, create `<target>` if missing, `state="translated"`).
+   b. Translate the `<source>` text to PURE German (zero English words, Anti-Copy-Paste rule applied).
+   c. Copy placeholders EXACTLY using XML entities (e.g., `&amp;1`).
+   d. Count the rendered characters (remembering `&amp;1` = 2 chars). If > 73, compress using strategies.
+   e. Place the final translation in the `<target>` element.
+2. Validate final XML syntax (no loose `&` characters, all tags properly closed).
 3. Output the entire valid XLF code block.
+```
 ```
 
 ---
@@ -142,6 +166,11 @@ Adjust the "Object Type" field and character limits according to the artifact:
 ---
 
 ## Changelog
+
+### v3.1 (March 2026) — The XML & QA Safe Edition
+- **QA GATE:** Added Rule 6 (Anti-Copy-Paste) to prevent the LLM from marking un-translated/English strings as approved German text. 
+- **XML STRUCTURAL FIX:** Explicit instructions added to handle XML units missing the `<target>` tag completely (forcing the AI to create it).
+- **APPROVAL ENFORCEMENT:** Strict command added to modify `<trans-unit approved="no">` to `approved="yes"` to ensure SAP LXE_MASTER actually processes the translation out of the proposal pool.
 
 ### v3.0 (March 2026) — The Ultimate XML-Safe Edition
 - **CRITICAL FIX:** Reverted placeholder rule to mandate exact XML entities (e.g., `&amp;1`). Using plain `&` invalidates XLF syntax and breaks SAP LXE_MASTER import.
@@ -162,3 +191,4 @@ Adjust the "Object Type" field and character limits according to the artifact:
 ### v2.0 (March 2026)
 - Initial template for S/4HANA 2023 project (MESS object type).
 - Created standard SAP DE terminology glossary.
+```
