@@ -136,6 +136,7 @@ You must output a valid XLIFF 1.2 file. Modifying the XML structure incorrectly 
   <target state="translated">Pure German Text &amp;1</target>
 </trans-unit>
 ```
+---
 
 ## Execution Instructions
 
@@ -147,8 +148,6 @@ You must output a valid XLIFF 1.2 file. Modifying the XML structure incorrectly 
    e. Place the final translation in the `<target>` element.
 2. Validate final XML syntax (no loose `&` characters, all tags properly closed).
 3. Output the entire valid XLF code block.
-```
-```
 
 ---
 
@@ -191,4 +190,3 @@ Adjust the "Object Type" field and character limits according to the artifact:
 ### v2.0 (March 2026)
 - Initial template for S/4HANA 2023 project (MESS object type).
 - Created standard SAP DE terminology glossary.
-```
