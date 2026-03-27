@@ -1,8 +1,7 @@
-
 # SAP S/4HANA Localization — XLF Translation Prompt Template
 
 > **Purpose:** Reusable prompt for mass translation of Z* Data Elements (DTEL) via XLF (XLIFF 1.2) files.
-> **Version:** 1.2 — DTEL Edition (UI Field Labels & Headers)
+> **Version:** 1.3 — DTEL Edition (UI Field Labels & Headers)
 > **Context:** SAP S/4HANA 2023 Rollout Project — EN→DE Localization
 
 ---
@@ -57,19 +56,42 @@ Use the official SAP DE glossary. Key references:
 | Document | Beleg | Bel. |
 | Indicator / Flag | Kennzeichen | Kz. |
 
-### 3. Dynamic Character Limits & Consistency (READ THE XML)
+### 3. Character Limits & Abbreviation Rules (ZERO TOLERANCE)
 
-**CRITICAL:** Unlike messages, DTELs have multiple lengths (Short, Medium, Long, Heading). A single Data Element will appear in consecutive `<trans-unit>` blocks with different `maxwidth` values (e.g., 10, 20, 40, 55, 60).
-- You MUST read the `maxwidth="X"` attribute in EVERY `<trans-unit>` tag and strictly obey it.
-- **CONSISTENCY RULE:** Keep the root translation consistent across the different lengths for the same element. Use the full word for the Long text, and logically abbreviate that SAME word for the Short text.
+**CRITICAL:** The `maxwidth="X"` attribute is a hard physical limit of the SAP database. The system **will reject** the entire file import if any translated text exceeds this value by even a single character.
 
-#### Length Optimization Strategies (If translation exceeds `maxwidth`):
-1. **Aggressive Abbreviation for Short Labels (maxwidth 10-15):**
+#### 3.1 Binary Character Counting
+Count every single character, including spaces, periods, and symbols. If the limit is 10 and your translation "Eigenschaft" has 11, you **MUST** abbreviate it (e.g., "Eigensch." — 8 chars).
+
+#### 3.2 The "No-Space-After-Dot" Rule
+To save critical space in labels where `maxwidth` ≤ 20, **NEVER** use a space after an abbreviation period:
+- ❌ WRONG: `Anz. Monate` (11 chars — Error if `maxwidth="10"`)
+- ✅ CORRECT: `Anz.Monate` (10 chars — OK)
+
+#### 3.3 Abbreviation Strategies (by priority)
+When a translation exceeds `maxwidth`, apply these strategies in order:
+
+1. **Aggressive Abbreviation for Short Labels (maxwidth 10–15):**
    - "Materialnummer" (14) → "Mat.Nr." (7)
    - "Bestellnummer" (13) → "Bestellnr." (10)
    - "Lagerort" (8) → "LagOrt" (6)
-2. **Remove Spaces in Compounds:** "Prod. Order" → "ProzAuftr"
-3. **Prioritize the Noun:** "Date of Creation" → "Erfassungsdatum" → "ErfassDat."
+2. **Remove Spaces in Compounds:**
+   - "Prod. Order" → "ProzAuftr"
+   - In German, always merge compound nouns (e.g., `Prozessauftrag` instead of `Prozess Auftrag`).
+3. **Prioritize the Noun:**
+   - "Date of Creation" → "Erfassungsdatum" → "ErfassDat."
+4. **Use Standard SAP Abbreviations:**
+   - If "Handling Unit" exceeds the limit, use `HU`.
+   - If "Status" exceeds the limit, use `St.` or `Sts`.
+
+#### 3.4 Vertical Consistency Across Lengths
+A single Data Element appears in consecutive `<trans-unit>` blocks with different `maxwidth` values (e.g., 10, 20, 40, 55, 60). You MUST:
+- Read the `maxwidth` attribute in **EVERY** `<trans-unit>` tag and strictly obey it.
+- Keep the **root translation consistent** across all lengths for the same element.
+- Use the **full word** for the Long text (`SCRTEXT_L` / `REPTEXT` / `DDTEXT`), and logically abbreviate that **SAME word** for the Short text (`SCRTEXT_S`).
+- **Never** use a synonym for the short version — only a contraction of the long version.
+  - ✅ Long: "Verfallsdatum" → Short: "VerfDat"
+  - ❌ Long: "Verfallsdatum" → Short: "Ablauf" (synonym — inconsistent)
 
 ### 4. XML Syntax & Placeholders (STRICT)
 Data Elements rarely use placeholders, but if they contain `&` or formatting characters:
@@ -77,7 +99,7 @@ Data Elements rarely use placeholders, but if they contain `&` or formatting cha
 - Generating a plain `&` character will invalidate the XML and crash the SAP import.
 
 ### 5. Pure German Text (ZERO TOLERANCE FOR ENGLISH)
-No English words are allowed in the German target text. 
+No English words are allowed in the German target text.
 - ❌ WRONG: "Sales Document" (in DE target)
 - ✅ CORRECT: "Verkaufsbeleg"
 
@@ -91,7 +113,8 @@ The `<target>` text MUST NEVER be identical to the `<source>` text, EXCEPT when 
 
 You must output a valid XLIFF 1.2 file. Modifying the XML structure incorrectly will cause fatal import errors in SAP LXE_MASTER. Follow these exact rules for EVERY `<trans-unit>` block:
 
-1. **The `<trans-unit>` tag:** - MUST contain `approved="yes"`. If the original says `approved="no"` or if the attribute is missing, force it to `approved="yes"`.
+1. **The `<trans-unit>` tag:**
+   - MUST contain `approved="yes"`. If the original says `approved="no"` or if the attribute is missing, force it to `approved="yes"`.
    - DO NOT modify any other attributes (`maxwidth`, `id`, `resname`, `size-unit`). Keep all attributes exactly as they are.
 2. **The `<source>` tag:**
    - DO NOT modify this tag or its text content under any circumstances.
@@ -101,7 +124,7 @@ You must output a valid XLIFF 1.2 file. Modifying the XML structure incorrectly 
    - MUST contain the attribute `state="translated"`. Remove any other state like "needs-review-translation" or "new".
    - The translated German text goes inside this tag.
 
-**Example of the Expected Final Structure (Notice all 5 tags are updated with approved="yes" and target created):**
+**Example of the Expected Final Structure:**
 ```xml
 <file datatype="plaintext" original="//S4S//101//999999//DTEL//Z_KOSHER" source-language="en-US" target-language="de-DE" date="2026-03-26T22:05:28Z" category="ZZ" xml:space="preserve">
     <body>
@@ -134,8 +157,9 @@ You must output a valid XLIFF 1.2 file. Modifying the XML structure incorrectly 
 1. For EACH translation unit in the provided file:
    a. Check the `maxwidth` attribute to understand the strict limit for this specific label.
    b. Translate the `<source>` text to a PURE German noun/label (Anti-Copy-Paste rule applied).
-   c. Count the characters. If it exceeds `maxwidth`, apply abbreviations aggressively.
-   d. Ensure consistency across Short/Medium/Long tags for the same element.
+   c. Count the characters of the translation. If it exceeds `maxwidth`, apply abbreviation strategies from Rule 3.3 aggressively.
+   d. Verify vertical consistency: ensure Short/Medium/Long labels for the same element use the same root word (Rule 3.4).
    e. Apply the structural rules (`approved="yes"`, create `<target>` if missing, `state="translated"`).
 2. Validate final XML syntax (no loose `&` characters, all tags properly closed).
 3. Output the entire valid XLF code block.
+```
