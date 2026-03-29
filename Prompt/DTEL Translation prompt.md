@@ -69,21 +69,49 @@ To save critical space in labels where `maxwidth` ≤ 20, **NEVER** use a space 
 - ❌ WRONG: `Anz. Monate` (11 chars — Error if `maxwidth="10"`)
 - ✅ CORRECT: `Anz.Monate` (10 chars — OK)
 
-#### 3.3 Abbreviation Strategies (by priority)
-When a translation exceeds `maxwidth`, apply these strategies in order:
+#### 3.3 Abbreviation Strategies (by Priority - UNIFIED APPROACH)
 
-1. **Aggressive Abbreviation for Short Labels (maxwidth 10–15):**
-   - "Materialnummer" (14) → "Mat.Nr." (7)
-   - "Bestellnummer" (13) → "Bestellnr." (10)
-   - "Lagerort" (8) → "LagOrt" (6)
-2. **Remove Spaces in Compounds:**
-   - "Prod. Order" → "ProzAuftr"
-   - In German, always merge compound nouns (e.g., `Prozessauftrag` instead of `Prozess Auftrag`).
-3. **Prioritize the Noun:**
-   - "Date of Creation" → "Erfassungsdatum" → "ErfassDat."
-4. **Use Standard SAP Abbreviations:**
-   - If "Handling Unit" exceeds the limit, use `HU`.
-   - If "Status" exceeds the limit, use `St.` or `Sts`.
+When a translation exceeds `maxwidth`, apply these strategies **in strict order**. This is your single source of truth for all abbreviation decisions.
+
+**Priority 1: SAP Standard Abbreviations (PREFERRED)**
+Use industry-recognized German abbreviations from SAP's own naming conventions:
+   - "Materialnummer" → "Mat.Nr." (7 chars)
+   - "Bestellnummer" → "Bestellnr." (10 chars)
+   - "Handling Unit" → "HU" (2 chars)
+   - "Status" → "St." or "Sts" (2-3 chars)
+   
+✅ **Advantage:** Immediately recognizable to SAP users; maintains SAP ecosystem consistency.
+
+**Priority 2: Intelligent Compound Merging & CamelCase Abbreviation**
+For German compound nouns, merge syllables and use CamelCase to reduce character count while preserving meaning:
+   - "Lagerort" (8) → "LagOrt" (6) — merge syllables
+   - "Prozessauftrag" (14) → "ProzAuftr" (9) — keep meaningful morphemes
+   - "Erfassungsdatum" (15) → "ErfassDat." (10) — noun + core descriptor
+   
+✅ **Rule:** Preserve first syllables of each word component, drop articles/prepositions, maintain CamelCase format.
+
+**Priority 3: Strategic Vowel Removal (German DIN 2340 Standard)**
+Remove vowels strategically while keeping the word recognizable per German acronym standards:
+   - "Materialbestandteil" (19) → "Matbest." (8 chars)
+   - "Dokumenttyp" (11) → "Dtyp" (4 chars)
+   - "Verfallsdatum" (13) → "Verfalls." (9 chars)
+   
+✅ **Rule:** Remove interior vowels only; preserve consonant clusters and word boundaries; add period to indicate truncation.
+
+**Priority 4: Last Resort - Conservative Truncation**
+Only use if Priorities 1–3 cannot accommodate the `maxwidth`. Always add a period to indicate intentional truncation:
+   - "Koscher" (7) → "Ksch." (5 chars) if maxwidth=5
+   - "Kategorie" (9) → "Kateg." (6 chars) if maxwidth=6
+   
+⚠️ **Use ONLY when no other strategy fits.** Preserve word stem + first suffix segment.
+
+**CRITICAL RULES:**
+- ❌ NEVER use English abbreviations in German text (e.g., use "Dok." NOT "Doc.")
+- ❌ NEVER mix languages in one abbreviation
+- ❌ NEVER create non-standard acronyms not recognized in German business context
+- ✅ ALWAYS apply the "No-Space-After-Dot" rule (see 3.2): `Mat.Nr` (no space before next word)
+
+**Example Workflow (Full → Short):**
 
 #### 3.4 Vertical Consistency Across Lengths
 A single Data Element appears in consecutive `<trans-unit>` blocks with different `maxwidth` values (e.g., 10, 20, 40, 55, 60). You MUST:
@@ -96,6 +124,27 @@ A single Data Element appears in consecutive `<trans-unit>` blocks with differen
 
 #### 3.5 CamelCase & Concatenated Source Texts
 SAP developers often remove spaces in the English source text to fit limits (e.g., "BatchCount", "BillingDoc"). You must parse these concatenated words, identify the root terms, and translate them correctly into German compound nouns (e.g., "Chargenanzahl", "Fakturabeleg"), adapting to the `maxwidth`.
+
+### Rule 3.6: Fallback Strategy for Maxwidth Violations
+
+When `maxwidth` constraint cannot be satisfied with full translation:
+
+**Priority Order:**
+1. **SAP Standard Abbreviations** (use approved German abbreviations)
+   - Beispiel: "Besch." (Beschreibung) → "Besch."
+   - Beispiel: "Kat." (Kategorie) → "Kat."
+   
+2. **DIN 2340 Acronyms** (German industry standard)
+   - Beispiel: "Materialbestandteil" → "Matbest." or "MB"
+   - Beispiel: "Dokumenttyp" → "Dtyp" or "DT"
+   
+3. **Intelligent Truncation** (only if no abbreviation available)
+   - Remove vowels strategically: "Koscher" → "Ksch." (if maxwidth=5)
+   - Preserve word stems and suffixes
+
+**NEVER:**
+- Use English abbreviations in German text (e.g., "Doc" instead of "Dok.")
+- Mix languages in abbreviations
 
 ### 4. XML Syntax & Placeholders (STRICT)
 Data Elements rarely use placeholders, but if they contain `&` or formatting characters:
