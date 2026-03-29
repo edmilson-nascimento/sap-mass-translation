@@ -381,7 +381,39 @@ You must output a valid XLIFF 1.2 file. Follow these exact rules for EVERY `<tra
 
 ---
 
-## Execution Instructions
+(...) 
+[Mantenha suas Regras e Exemplos de XML aqui]
+
+---
+
+## EXECUTION PROTOCOL (Generic)
+
+Apply this protocol to ensure XML integrity and semantic consistency. This overrides any previous output instructions.
+
+### Phase 1: Strategic Analysis & Mapping Table
+Before generating any XML code, you MUST analyze the file and present a Translation Strategy Table:
+1. Identify placeholders (like &1), technical acronyms, and maxwidth constraints.
+2. Present a table with: Source Text | Target Suggestion | Pattern/Rule applied | Length Check.
+3. PAUSE and ask: "Should I proceed with the XML generation for these entries?"
+
+### Phase 2: Batch Execution (The "Anti-Dump" Rule)
+Upon approval, generate the XML output in batches of maximum 10-15 <file> blocks.
+1. Maintain all attributes (id, resname, whitespace) exactly as provided.
+2. Ensure &amp; remains &amp; and symbols (®, €, °) are preserved.
+3. Set approved="yes" and state="translated" for every entry.
+
+### Phase 3: Technical Verification
+Before finishing each batch, verify:
+1. No English left in German targets.
+2. Placeholders (&1, &) are in correct positions.
+3. Grammar is consistent within the same object.
+
+### Phase 4: Output
+Output the entire valid XLF code block.
+
+---
+
+## Execution Instructions (VALU DOMA Specific)
 
 ### Phase 1: Pre-Scan (MANDATORY)
 1. Scan the ENTIRE XLF file structure.
@@ -389,7 +421,7 @@ You must output a valid XLIFF 1.2 file. Follow these exact rules for EVERY `<tra
 3. **For each VALU domain:** Read ALL fixed values (trans-units) before translating any. Note the values are NOT in numerical order. Decide on ONE grammatical pattern for the entire domain (Rule 2).
 4. **For entries with existing `<target>`:** Flag for evaluation (Rule 3 — override if wrong).
 
-### Phase 2: Translation
+### Phase 2: Translation Details
 For EACH `<trans-unit>`:
 1. Read the `maxwidth` attribute (expected: 60 for all entries in this file).
 2. If DOMA: Translate the source text as a German descriptive noun phrase.
@@ -404,9 +436,9 @@ For EACH `<trans-unit>`:
 11. Set `state="translated"` on the `<target>` tag.
 12. Preserve all whitespace in `id` and `resname` attributes exactly (Rule 7.5).
 
-### Phase 3: Validation (MANDATORY — run before output)
+### Phase 3: Validation Checklist (MANDATORY)
 
-**Checklist — verify EVERY item before delivering the file:**
+**Verify EVERY item before delivering:**
 - [ ] ALL `<target>` tags have `state="translated"` (no "needs-review-translation", no "new")
 - [ ] ALL `<trans-unit>` tags have `approved="yes"` (no "no")
 - [ ] NO target text exceeds its `maxwidth` of 60 characters
@@ -420,7 +452,4 @@ For EACH `<trans-unit>`:
 - [ ] NO unmatched parentheses "fixed" — truncated sources stay truncated
 - [ ] ALL `id` and `resname` attribute whitespace preserved exactly
 - [ ] XML is well-formed (all tags properly closed, no stray characters)
-
-### Phase 4: Output
-Output the entire valid XLF code block.
 ```
