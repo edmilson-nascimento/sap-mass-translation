@@ -452,4 +452,7 @@ For EACH `<trans-unit>`:
 - [ ] NO unmatched parentheses "fixed" — truncated sources stay truncated
 - [ ] ALL `id` and `resname` attribute whitespace preserved exactly
 - [ ] XML is well-formed (all tags properly closed, no stray characters)
+
+### Phase 4: Output
+Output the entire valid XLF code block with all corrections applied.
 ```
