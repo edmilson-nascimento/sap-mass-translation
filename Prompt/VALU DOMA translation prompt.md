@@ -1,10 +1,11 @@
 # SAP S/4HANA Localization — XLF Translation Prompt Template
 
 > **Purpose:** Reusable prompt for mass translation of Z* Domains and Domain Fixed Values via XLF (XLIFF 1.2) files.
-> **Version:** 1.1 — VALU + DOMA Edition (Domain Descriptions & Fixed Value Texts)
+> **Version:** 1.2 — VALU + DOMA Edition (Domain Descriptions & Fixed Value Texts)
 > **Context:** SAP S/4HANA 2023 Rollout Project — EN→DE Localization (Takasago Europe GmbH)
 > **Base:** Derived from DTEL v1.4 with object-specific adaptations and real-file validation.
 > **File Profile:** ~281 DOMA + ~92 VALU domains = ~615 trans-units. maxwidth="60" universal. Majority (94%) without existing target.
+> **Changelog v1.2:** Added Rule 7 (Special Characters & Symbols preservation), expanded pitfalls table.
 
 ---
 
@@ -187,17 +188,54 @@ Takasago is a flavors & fragrances manufacturer. The file contains domain-specif
 
 **Rule:** For internationally standardized regulatory/certification terms (Halal, Brix, IFRA, FEMA), keep the original if the German SAP standard also uses it. For terms with established German equivalents (Kosher→Koscher, R&D→F&E), translate.
 
-### 7. XML Syntax & Special Characters (STRICT)
+### 7. XML Syntax, Special Characters & Symbols (STRICT)
 
-#### 7.1 XML Entities — Preserve Exactly
-The file contains 10 occurrences of `&amp;` in source texts. These MUST be preserved:
+#### 7.1 XML Entities — Preserve Exactly (CRITICAL)
+The file contains 10 occurrences of `&amp;` in source texts. These MUST be preserved as `&amp;` in the target:
 - Source: `Auto Budget &amp; Forecast (%)` → Target: `Automatisches Budget &amp; Prognose (%)`
 - Source: `R&amp;D: Dosage Reference` → Target: `F&amp;E: Dosierungsreferenz`
 - Source: `Remaining &amp; Reblending already processed` → Target must keep `&amp;`
 
 **CRITICAL:** Writing a plain `&` instead of `&amp;` will invalidate the XML and crash the SAP import.
 
-#### 7.2 Attribute Whitespace — DO NOT MODIFY
+#### 7.2 Special Characters & Symbols — Preserve in Target
+
+The file contains various special characters and symbols. These are NOT XML entities — they are plain UTF-8 characters that appear directly in source texts. They MUST be preserved as-is in the target translation.
+
+**Complete inventory from this file:**
+
+| Character | Unicode | Occurrences | Real Example from File | Rule |
+|---|---|---|---|---|
+| `%` | U+0025 | 8 | `Dosage (%)`, `10% - Industrialisation` | Preserve as-is. Safe in XML. Do NOT convert to entity. |
+| `€` | U+20AC | 1 | `Price (€/kg)` | Preserve as-is. Currency symbol, valid UTF-8. |
+| `°` | U+00B0 | 1 | `Flash Point [°C]` | Preserve as-is. Degree symbol, valid UTF-8. |
+| `®` | U+00AE | 2 | `Granutak®`, `Micron Plus®` | **Preserve. These are Takasago registered product names. Do NOT translate the product name. Do NOT remove the ® symbol.** |
+| `/` | U+002F | 28 | `Y/N`, `QVC/RVC`, `95/5`, `€/kg` | Preserve. Do NOT replace with "oder" or rewrite as prose. |
+| `-` | U+002D | 45 | `No valid - Old data`, `10% - Industrialisation` | Preserve including surrounding spaces. |
+| `( )` | U+0028/29 | 34/31 | `Dosage (%)`, `Method (QVC/RVC)` | Preserve with their content. See Rule 7.3 for unmatched cases. |
+| `[ ]` | U+005B/5D | 1 | `Flash Point [°C]` | Preserve with their content (unit indicators). |
+| `.` | U+002E | 8 | `GR below Min. Shelf Life` | Preserve abbreviation dots from source. |
+| `,` | U+002C | 7 | `MTO, MTS` | Preserve. |
+| `:` | U+003A | 2 | `R&amp;D: Dosage Reference` | Preserve position and spacing. |
+| `+` | U+002B | 1 | `Number of Month +/-` | Preserve. |
+| `_` | U+005F | 5 | `ZCO_CMAT_CAT_LVL` | Technical name — do NOT translate, keep as-is. |
+
+**General principle:** If a symbol exists in the `<source>`, the `<target>` must contain the same symbol in the equivalent position — unless the surrounding text structure changes during translation (e.g., word order), in which case the symbol stays attached to the same semantic element.
+
+#### 7.3 Unmatched Parentheses — DO NOT FIX
+
+Three VALU source texts have opening parentheses without closing ones. These are truncated by SAP at the maxwidth boundary:
+- `Check/Repair, manual posting by production manager (Head of`
+- `Lost/missed, manual posting by production manager (Head of P`
+- `Scrapped, manual posting by production manager (Head of Prod`
+
+**Rule:** If the source has an unmatched `(`, the target translation may also have an unmatched `(` if the translation is similarly long. Do NOT "correct" this by adding a closing `)`. Do NOT remove the opening `(`. Translate the visible text as faithfully as possible within the maxwidth, even if it results in a truncated appearance.
+
+#### 7.4 Trailing Whitespace — NO SPECIAL HANDLING
+
+One source text (`90% - Negotiation`) contains trailing Unicode EN-SPACE characters (U+2002). These are in the `<source>` tag only and are NOT modified (per the global rule "DO NOT modify the `<source>` tag"). The `<target>` tag does NOT need to replicate trailing whitespace from the source. Simply translate the visible text content.
+
+#### 7.5 Attribute Whitespace — DO NOT MODIFY
 The `id` and `resname` attributes contain **intentional internal whitespace**:
 - DOMA pattern: `id="DDTEXT  A"` (2 spaces before A)
 - VALU pattern: `id="DDTEXT    00001"` (4 spaces before the number)
@@ -237,6 +275,11 @@ If the `<source>` contains translatable English words, the `<target>` MUST be tr
 | 8 | Writing `&` instead of `&amp;` | `R&D` | `F&amp;E` |
 | 9 | Over-abbreviating with maxwidth=60 | "Abg." for "Abgeschlossen" | "Abgeschlossen" (14 chars fits in 60) |
 | 10 | Treating Umlauts as 2 characters | "ü" = 2 chars? | "ü" = 1 character in SAP |
+| 11 | Removing ® from product names | "Granutak" (without ®) | "Granutak®" (preserve symbol) |
+| 12 | Translating registered product names | "Granutak®" → "Granulat®" | "Granutak®" (brand name — keep as-is) |
+| 13 | Replacing `/` with prose in value texts | "Y/N" → "Ja oder Nein" | "J/N" (preserve slash pattern) |
+| 14 | Dropping `%`, `€`, `°`, `[]` symbols | "Dosierung" (lost %) | "Dosierung (%)" (preserve symbol) |
+| 15 | "Fixing" unmatched parentheses in truncated texts | Adding `)` to close | Leave unmatched — source is truncated |
 
 ---
 
@@ -308,6 +351,34 @@ You must output a valid XLIFF 1.2 file. Follow these exact rules for EVERY `<tra
 </file>
 ```
 
+**Example — DOMA with `€`, `°`, `®` symbols (preserve all):**
+```xml
+<trans-unit size-unit="char" approved="yes" maxwidth="60" id="DDTEXT  A" resname="DOMA//ZPL_PRICE_EUR//DDTEXT  A">
+    <source>Price (€/kg)</source>
+    <target state="translated">Preis (€/kg)</target>
+</trans-unit>
+<trans-unit size-unit="char" approved="yes" maxwidth="60" id="DDTEXT  A" resname="DOMA//ZFLASH_POINT//DDTEXT  A">
+    <source>Flash Point [°C]</source>
+    <target state="translated">Flammpunkt [°C]</target>
+</trans-unit>
+```
+
+**Example — VALU with ® product name (do NOT translate brand, preserve ®):**
+```xml
+<trans-unit size-unit="char" approved="yes" maxwidth="60" id="DDTEXT    00001" resname="VALU//ZPPM_DPR_PRJ_TYPE//DDTEXT    00001">
+    <source>Fluid Bed Greanulation (Granutak®)</source>
+    <target state="translated">Wirbelschichtgranulierung (Granutak®)</target>
+</trans-unit>
+```
+
+**Example — VALU with unmatched parenthesis (do NOT close it):**
+```xml
+<trans-unit size-unit="char" approved="yes" maxwidth="60" id="DDTEXT    00001" resname="VALU//ZPP_PRD_REASON//DDTEXT    00001">
+    <source>Check/Repair, manual posting by production manager (Head of</source>
+    <target state="translated">Prüfung/Reparatur, manuelle Buchung durch Produktionsleiter (</target>
+</trans-unit>
+```
+
 ---
 
 ## Execution Instructions
@@ -327,9 +398,11 @@ For EACH `<trans-unit>`:
 5. Apply industry terminology rules (Rule 6) for Takasago-specific terms.
 6. Count characters. If over maxwidth (rare with 60), abbreviate minimally.
 7. Preserve `&amp;` entities exactly (Rule 7.1).
-8. Set `approved="yes"` on the `<trans-unit>` tag.
-9. Set `state="translated"` on the `<target>` tag.
-10. Preserve all whitespace in `id` and `resname` attributes exactly (Rule 7.2).
+8. Preserve all special characters (`%`, `€`, `°`, `®`, `/`, `-`, `()`, `[]`) per Rule 7.2.
+9. Do NOT "fix" unmatched parentheses in truncated texts (Rule 7.3).
+10. Set `approved="yes"` on the `<trans-unit>` tag.
+11. Set `state="translated"` on the `<target>` tag.
+12. Preserve all whitespace in `id` and `resname` attributes exactly (Rule 7.5).
 
 ### Phase 3: Validation (MANDATORY — run before output)
 
@@ -342,6 +415,9 @@ For EACH `<trans-unit>`:
 - [ ] ALL values within the same VALU domain use the same grammatical pattern
 - [ ] ALL pre-existing wrong targets have been overridden (especially "EHS: Ausnahmewert..." entries)
 - [ ] ALL `&amp;` entities preserved (not converted to plain `&`)
+- [ ] ALL special characters preserved: `%`, `€`, `°`, `®`, `/`, `-`, `()`, `[]`, `:`, `+`
+- [ ] ALL `®` symbols kept with their product names (Granutak®, Micron Plus®)
+- [ ] NO unmatched parentheses "fixed" — truncated sources stay truncated
 - [ ] ALL `id` and `resname` attribute whitespace preserved exactly
 - [ ] XML is well-formed (all tags properly closed, no stray characters)
 
