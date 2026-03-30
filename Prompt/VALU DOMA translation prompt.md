@@ -386,73 +386,34 @@ You must output a valid XLIFF 1.2 file. Follow these exact rules for EVERY `<tra
 
 ---
 
-## EXECUTION PROTOCOL (Generic)
+# MASTER EXECUTION PROTOCOL (Direct-Action & High-Fidelity)
+# Context: SAP S/4HANA Rollout (Takasago Europe GmbH). Domain: DOMA/VALU translation (EN to DE).
 
-Apply this protocol to ensure XML integrity and semantic consistency. This overrides any previous output instructions.
+## Phase 1: Internal Pre-Scan & Semantic Grouping (NO PAUSE REQUIRED)
+Before generating the output, silently analyze the provided XLF file:
+1. Scan all `<file>` blocks and classify them as DOMA or VALU.
+2. For each VALU domain: Group all fixed values (trans-units) associated with that domain. Decide on ONE consistent grammatical pattern for the entire domain (e.g., all past participles, all nominalized verbs, or all nouns) before translating.
+3. Identify existing `<target>` tags. Flag incorrect translations (e.g., standard SAP EHS copy-paste errors for custom Z* domains) and untranslated English words to be overridden.
 
-### Phase 1: Strategic Analysis & Mapping Table
-Before generating any XML code, you MUST analyze the file and present a Translation Strategy Table:
-1. Identify placeholders (like &1), technical acronyms, and maxwidth constraints.
-2. Present a table with: Source Text | Target Suggestion | Pattern/Rule applied | Length Check.
-3. PAUSE and ask: "Should I proceed with the XML generation for these entries?"
-
-### Phase 2: Batch Execution (The "Anti-Dump" Rule)
-Upon approval, generate the XML output in batches of maximum 10-15 <file> blocks.
-1. Maintain all attributes (id, resname, whitespace) exactly as provided.
-2. Ensure &amp; remains &amp; and symbols (®, €, °) are preserved.
-3. Set approved="yes" and state="translated" for every entry.
-
-### Phase 3: Technical Verification
-Before finishing each batch, verify:
-1. No English left in German targets.
-2. Placeholders (&1, &) are in correct positions.
-3. Grammar is consistent within the same object.
-
-### Phase 4: Output
-Output the entire valid XLF code block.
-
----
-
-## Execution Instructions (VALU DOMA Specific)
-
-### Phase 1: Pre-Scan (MANDATORY)
-1. Scan the ENTIRE XLF file structure.
-2. Identify all `<file>` blocks and classify as DOMA or VALU (from `original` attribute).
-3. **For each VALU domain:** Read ALL fixed values (trans-units) before translating any. Note the values are NOT in numerical order. Decide on ONE grammatical pattern for the entire domain (Rule 2).
-4. **For entries with existing `<target>`:** Flag for evaluation (Rule 3 — override if wrong).
-
-### Phase 2: Translation Details
+## Phase 2: Translation Rules & Glossary Application
 For EACH `<trans-unit>`:
-1. Read the `maxwidth` attribute (expected: 60 for all entries in this file).
-2. If DOMA: Translate the source text as a German descriptive noun phrase.
-3. If VALU: Translate following the chosen grammatical pattern for this domain.
-4. If existing target: Evaluate and override if wrong (Rule 3). Keep if correct.
-5. Apply industry terminology rules (Rule 6) for Takasago-specific terms.
-6. Count characters. If over maxwidth (rare with 60), abbreviate minimally.
-7. Preserve `&amp;` entities exactly (Rule 7.1).
-8. Preserve all special characters (`%`, `€`, `°`, `®`, `/`, `-`, `()`, `[]`) per Rule 7.2.
-9. Do NOT "fix" unmatched parentheses in truncated texts (Rule 7.3).
-10. Set `approved="yes"` on the `<trans-unit>` tag.
-11. Set `state="translated"` on the `<target>` tag.
-12. Preserve all whitespace in `id` and `resname` attributes exactly (Rule 7.5).
+1. **DOMA:** Translate as a clear, descriptive German noun phrase.
+2. **VALU:** Translate strictly following the grammatical pattern chosen in Phase 1 for that domain. Keep it concise (no full sentences).
+3. **Glossary:** Apply official SAP DE terminology (e.g., Plant = Werk, Company Code = Buchungskreis) and Takasago industry terms (Halal, Koscher, Brix, F&E, Natürliches Aroma). 
+4. **Character Limits:** Respect the `maxwidth` attribute (usually 60). If it exceeds the limit, abbreviate conservatively using standard German SAP abbreviations.
+5. **Anti-Copy-Paste:** Target must be pure German. No English words allowed unless it's a technical acronym (e.g., MTO, MTS, BOM) or an international industry standard.
 
-### Phase 3: Validation Checklist (MANDATORY)
+## Phase 3: Strict XML & Technical Integrity
+You MUST apply these rules to ensure the file imports correctly into SAP LXE_MASTER:
+1. **Attributes:** The `<trans-unit>` tag MUST contain `approved="yes"`. The `<target>` tag MUST contain `state="translated"`. Do NOT alter any other attributes.
+2. **Attribute Whitespace:** Preserve all intentional internal whitespace within `id` and `resname` exactly as in the source (e.g., `id="DDTEXT    00001"`).
+3. **XML Entities:** Preserve `&amp;` exactly. Do NOT convert it to a plain `&`.
+4. **Special Characters:** Preserve all UTF-8 symbols from the source in the target (`%`, `€`, `°`, `®`, `/`, `-`, `[ ]`). Do NOT translate registered brand names containing `®` (e.g., Granutak®).
+5. **Truncation:** If the source text has an unmatched/unclosed parenthesis (e.g., due to SAP truncation), do NOT "fix" or close it in the target translation.
+6. **Existing Targets:** Override any existing wrong `<target>` texts. Keep them ONLY if they are perfectly correct in German.
 
-**Verify EVERY item before delivering:**
-- [ ] ALL `<target>` tags have `state="translated"` (no "needs-review-translation", no "new")
-- [ ] ALL `<trans-unit>` tags have `approved="yes"` (no "no")
-- [ ] NO target text exceeds its `maxwidth` of 60 characters
-- [ ] NO English words in German targets (except Rule 8 exceptions: acronyms, international terms)
-- [ ] NO target identical to source (except technical/acronym exceptions per Rule 9)
-- [ ] ALL values within the same VALU domain use the same grammatical pattern
-- [ ] ALL pre-existing wrong targets have been overridden (especially "EHS: Ausnahmewert..." entries)
-- [ ] ALL `&amp;` entities preserved (not converted to plain `&`)
-- [ ] ALL special characters preserved: `%`, `€`, `°`, `®`, `/`, `-`, `()`, `[]`, `:`, `+`
-- [ ] ALL `®` symbols kept with their product names (Granutak®, Micron Plus®)
-- [ ] NO unmatched parentheses "fixed" — truncated sources stay truncated
-- [ ] ALL `id` and `resname` attribute whitespace preserved exactly
-- [ ] XML is well-formed (all tags properly closed, no stray characters)
-
-### Phase 4: Output
-Output the entire valid XLF code block with all corrections applied.
+## Phase 4: Continuous Output Generation (CRITICAL)
+1. Do NOT generate mapping tables. Do NOT ask for permission to proceed. Do NOT process in small batches.
+2. Execute the translation and output the ENTIRE valid XLIFF 1.2 code immediately.
+3. To prevent truncation due to token limits, output the XML code divided into 4 or more large Markdown blocks (```xml ... ```). Ensure the cuts happen cleanly between `<file>...</file>` blocks.
 ```
