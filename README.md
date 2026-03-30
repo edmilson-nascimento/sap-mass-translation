@@ -252,3 +252,11 @@ Como gerar a TR real: Para levar as traduções para QAS/PRD, você precisa usar
 ### Próximo passo sugerido:
 
 **Gostaria que eu revisasse o passo a passo para criar essa nova Object List (limpa, sem os pacotes ABAP marcados) para garantirmos que o Algarve apareça no log desta vez?**
+
+
+| Candidata | Conteúdo esperado |
+|---|---|
+| `TPOOL` | Text elements / selection texts |
+| `RSMPTEXTS` | GUI status / menu texts |
+| `D020S` | Screen painter |
+| `D021S` | Screen field definitions |
