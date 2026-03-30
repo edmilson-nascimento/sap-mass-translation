@@ -381,11 +381,6 @@ You must output a valid XLIFF 1.2 file. Follow these exact rules for EVERY `<tra
 
 ---
 
-(...) 
-[Mantenha suas Regras e Exemplos de XML aqui]
-
----
-
 # MASTER EXECUTION PROTOCOL (Direct-Action & High-Fidelity)
 # Context: SAP S/4HANA Rollout (Takasago Europe GmbH). Domain: DOMA/VALU translation (EN to DE).
 
